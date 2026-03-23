@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useCallback } from 'react'
+import React, { useRef, useCallback, useEffect } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import type { Swiper as SwiperType } from 'swiper'
 import 'swiper/css'
@@ -18,7 +18,6 @@ interface VideoCarouselProps {
   previewMode?: boolean
 }
 
-/** Toca todos os vídeos visíveis no elemento Swiper (original + clones de loop) */
 function playAllIn(el: HTMLElement | undefined | null) {
   if (!el) return
   el.querySelectorAll<HTMLVideoElement>('video').forEach((v) => {
@@ -43,8 +42,32 @@ export function VideoCarousel({
 }: VideoCarouselProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const swiperRef = useRef<SwiperType | null>(null)
+  const prevRef = useRef<HTMLButtonElement>(null)
+  const nextRef = useRef<HTMLButtonElement>(null)
 
-  // IntersectionObserver no container: play ao entrar, pause ao sair da viewport
+  // Após montar: força recalculo e posiciona no slide central
+  useEffect(() => {
+    const swiper = swiperRef.current
+    if (!swiper) return
+    const target = Math.floor(videos.length / 2)
+    const timer = setTimeout(() => {
+      swiper.update()
+      swiper.slideToLoop(target, 0) // sem animação — posiciona direto no centro
+      if (!previewMode) playAllIn(swiper.el)
+      // Debug
+      console.log('Swiper config:', {
+        slidesPerView: swiper.params.slidesPerView,
+        loop: swiper.params.loop,
+        loopAdditionalSlides: swiper.params.loopAdditionalSlides,
+        totalSlides: swiper.slides.length,
+        activeIndex: swiper.activeIndex,
+        realIndex: swiper.realIndex,
+        videosLength: videos.length,
+      })
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [videos.length, previewMode])
+
   const handleEnter = useCallback(() => {
     if (!previewMode) {
       setTimeout(() => playAllIn(swiperRef.current?.el), 150)
@@ -71,49 +94,43 @@ export function VideoCarousel({
     swiperRef.current?.slideNext()
   }, [])
 
-  const handlePrev = () => swiperRef.current?.slidePrev()
-  const handleNext = () => swiperRef.current?.slideNext()
-
   return (
     <div
       ref={containerRef}
-      className="relative vcw-carousel"
+      className="vcw-carousel"
       style={{
-        paddingTop: 8,
-        paddingBottom: 8,
+        position: 'relative',
         width: '100%',
         overflow: 'hidden',
+        paddingTop: 8,
+        paddingBottom: 8,
       }}
     >
       <Swiper
-        slidesPerView={2.2}
-        breakpoints={{
-          768:  { slidesPerView: 3.5, spaceBetween: 12 },
-          1024: { slidesPerView: 5.5, spaceBetween: 14 },
-        }}
         centeredSlides
         loop
-        loopAdditionalSlides={Math.max(videos.length, 6)}
-        initialSlide={Math.floor(videos.length / 2)}
+        loopAdditionalSlides={videos.length}
+        initialSlide={0}
         speed={500}
-        spaceBetween={10}
+        spaceBetween={12}
+        slidesPerView={2.3}
+        breakpoints={{
+          768:  { slidesPerView: 3.5, spaceBetween: 14 },
+          1024: { slidesPerView: 5.5, spaceBetween: 16 },
+          1440: { slidesPerView: 6.5, spaceBetween: 16 },
+        }}
         grabCursor={!previewMode}
         watchSlidesProgress
         touchRatio={previewMode ? 0 : 1}
         allowTouchMove={!previewMode}
         onSwiper={(swiper) => {
           swiperRef.current = swiper
-          setTimeout(() => {
-            swiper.update()
-            if (!previewMode) playAllIn(swiper.el)
-          }, 300)
-          setTimeout(() => swiper.update(), 500)
         }}
         onSlideChange={handleSlideChange}
         onSlideChangeTransitionEnd={(swiper) => {
           if (!previewMode) playAllIn(swiper.el)
         }}
-        style={{ overflow: 'visible' }}
+        style={{ overflow: 'visible', width: '100%' }}
         className="vcw-swiper"
       >
         {videos.map((video, index) => (
@@ -131,15 +148,18 @@ export function VideoCarousel({
         ))}
       </Swiper>
 
-      {/* Setas sobrepostas aos slides laterais, como LV Store */}
+      {/* Setas sobrepostas sobre os slides laterais */}
       {settings.showArrows && !previewMode && (
         <>
           <button
-            onClick={handlePrev}
+            ref={prevRef}
+            onClick={() => swiperRef.current?.slidePrev()}
             aria-label="Anterior"
-            className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center"
             style={{
-              left: 20,
+              position: 'absolute',
+              top: '50%',
+              left: 16,
+              transform: 'translateY(-50%)',
               zIndex: 20,
               width: 38,
               height: 38,
@@ -148,6 +168,9 @@ export function VideoCarousel({
               boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
               border: '1px solid rgba(0,0,0,0.07)',
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -155,11 +178,14 @@ export function VideoCarousel({
             </svg>
           </button>
           <button
-            onClick={handleNext}
+            ref={nextRef}
+            onClick={() => swiperRef.current?.slideNext()}
             aria-label="Próximo"
-            className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center"
             style={{
-              right: 20,
+              position: 'absolute',
+              top: '50%',
+              right: 16,
+              transform: 'translateY(-50%)',
               zIndex: 20,
               width: 38,
               height: 38,
@@ -168,6 +194,9 @@ export function VideoCarousel({
               boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
               border: '1px solid rgba(0,0,0,0.07)',
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

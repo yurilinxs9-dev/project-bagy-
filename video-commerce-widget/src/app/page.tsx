@@ -10,8 +10,10 @@ export default function Home() {
         <p className="text-center text-gray-500 mb-10">
           Demo — Carrossel de vídeos estilo stories para sua loja
         </p>
-        <VideoShowcase />
       </div>
+
+      {/* Carrossel fora do container com px-4 — ocupa largura total */}
+      <VideoShowcase />
     </main>
   )
 }
