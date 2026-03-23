@@ -94,7 +94,7 @@ export function FullscreenActions({
       style={{
         position: 'absolute',
         right: 8,
-        bottom: 175,
+        bottom: 240,
         display: 'flex',
         flexDirection: 'column',
         gap: 14,
