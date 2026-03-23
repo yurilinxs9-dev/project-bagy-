@@ -45,16 +45,13 @@ export function VideoCarousel({
   const prevRef = useRef<HTMLButtonElement>(null)
   const nextRef = useRef<HTMLButtonElement>(null)
 
-  // Após montar: força recalculo e posiciona no slide central
+  // Após montar: recalcula layout e toca vídeos
   useEffect(() => {
-    const swiper = swiperRef.current
-    if (!swiper) return
-    const target = Math.floor(videos.length / 2)
     const timer = setTimeout(() => {
+      const swiper = swiperRef.current
+      if (!swiper) return
       swiper.update()
-      swiper.slideToLoop(target, 0) // sem animação — posiciona direto no centro
       if (!previewMode) playAllIn(swiper.el)
-      // Debug
       console.log('Swiper config:', {
         slidesPerView: swiper.params.slidesPerView,
         loop: swiper.params.loop,
@@ -109,8 +106,8 @@ export function VideoCarousel({
       <Swiper
         centeredSlides
         loop
-        loopAdditionalSlides={videos.length}
-        initialSlide={0}
+        loopAdditionalSlides={videos.length * 2}
+        initialSlide={Math.floor(videos.length / 2)}
         speed={500}
         spaceBetween={12}
         slidesPerView={2.3}
