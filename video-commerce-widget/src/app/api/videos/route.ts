@@ -1,6 +1,8 @@
-import { getVideos, setVideos } from '@/lib/kv'
+import { getVideos, addVideo } from '@/lib/kv'
 import { requireAuth } from '@/lib/auth'
 import { VideoItem } from '@/types'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const videos = await getVideos()
@@ -19,21 +21,14 @@ export async function POST(request: Request) {
     return Response.json({ error: 'JSON inválido' }, { status: 400 })
   }
 
-  if (!video.id || !video.videoUrl || !video.posterUrl || !video.product?.name) {
+  if (!video.id || !video.videoUrl || !video.product?.name || !video.product?.price || !video.product?.url) {
     return Response.json(
-      { error: 'Campos obrigatórios: id, videoUrl, posterUrl, product.name' },
+      { error: 'Campos obrigatórios: id, videoUrl, product.name, product.price, product.url' },
       { status: 400 }
     )
   }
 
-  const videos = await getVideos()
-
-  if (videos.find((v) => v.id === video.id)) {
-    return Response.json({ error: 'ID já existe' }, { status: 409 })
-  }
-
-  videos.push(video)
-  await setVideos(videos)
+  await addVideo(video)
 
   return Response.json(video, { status: 201 })
 }

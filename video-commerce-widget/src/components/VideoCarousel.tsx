@@ -1,13 +1,12 @@
 'use client'
 
-import React, { useRef, useCallback, useEffect } from 'react'
+import React, { useRef, useCallback } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import type { Swiper as SwiperType } from 'swiper'
 import 'swiper/css'
 
 import { VideoItem, WidgetSettings } from '@/types'
 import { VideoSlide } from './VideoSlide'
-import { useVideoControl } from '@/hooks/useVideoControl'
 import { useIntersection } from '@/hooks/useIntersection'
 
 interface VideoCarouselProps {
@@ -17,6 +16,19 @@ interface VideoCarouselProps {
   onSlideChange: (index: number) => void
   onVideoClick: (index: number) => void
   previewMode?: boolean
+}
+
+/** Toca todos os vídeos visíveis no elemento Swiper (original + clones de loop) */
+function playAllIn(el: HTMLElement) {
+  el.querySelectorAll<HTMLVideoElement>('video').forEach((v) => {
+    if (v.paused) v.play().catch(() => {})
+  })
+}
+
+function pauseAllIn(el: HTMLElement) {
+  el.querySelectorAll<HTMLVideoElement>('video').forEach((v) => {
+    if (!v.paused) v.pause()
+  })
 }
 
 export function VideoCarousel({
@@ -29,50 +41,37 @@ export function VideoCarousel({
 }: VideoCarouselProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const swiperRef = useRef<SwiperType | null>(null)
-  const { setContainer, playAll, pauseAll } = useVideoControl()
 
-  // Liga o container ref ao hook de controle de vídeo
-  useEffect(() => {
-    setContainer(containerRef.current)
-  }, [setContainer])
-
-  // IntersectionObserver: toca ao entrar na viewport, pausa ao sair
+  // IntersectionObserver no container: play ao entrar, pause ao sair da viewport
   const handleEnter = useCallback(() => {
-    if (!previewMode) {
-      // Pequeno delay para Swiper ter renderizado os slides
-      setTimeout(playAll, 150)
+    if (!previewMode && swiperRef.current?.el) {
+      setTimeout(() => playAllIn(swiperRef.current!.el), 150)
     }
-  }, [playAll, previewMode])
+  }, [previewMode])
 
   const handleLeave = useCallback(() => {
-    pauseAll()
-  }, [pauseAll])
+    if (swiperRef.current?.el) pauseAllIn(swiperRef.current.el)
+  }, [])
 
   useIntersection(containerRef, handleEnter, handleLeave)
 
-  // Re-toca todos quando slide muda (garante clones em loop)
   const handleSlideChange = useCallback(
     (swiper: SwiperType) => {
       onSlideChange(swiper.realIndex)
+      // Re-toca após mudança — garante clones do loop
       if (!previewMode) {
-        setTimeout(playAll, 100)
+        setTimeout(() => playAllIn(swiper.el), 120)
       }
     },
-    [onSlideChange, playAll, previewMode]
+    [onSlideChange, previewMode]
   )
 
-  // Ao vídeo ativo terminar, avança para o próximo
   const handleVideoEnded = useCallback(() => {
     swiperRef.current?.slideNext()
   }, [])
 
-  const handlePrev = useCallback(() => {
-    swiperRef.current?.slidePrev()
-  }, [])
-
-  const handleNext = useCallback(() => {
-    swiperRef.current?.slideNext()
-  }, [])
+  const handlePrev = () => swiperRef.current?.slidePrev()
+  const handleNext = () => swiperRef.current?.slideNext()
 
   return (
     <div
@@ -80,37 +79,40 @@ export function VideoCarousel({
       className="relative vcw-carousel"
       style={{ paddingTop: 8, paddingBottom: 8 }}
     >
-      {/* Sem wrapper overflow:hidden — deixa os slides laterais aparecerem */}
       <Swiper
-        slidesPerView="auto"
+        // ── Slides per view numérico: Swiper calcula larguras internamente ──
+        slidesPerView={1.8}
+        breakpoints={{
+          768:  { slidesPerView: 3,   spaceBetween: 12 },
+          1024: { slidesPerView: 4.5, spaceBetween: 14 },
+        }}
         centeredSlides
         loop
-        loopAdditionalSlides={Math.max(videos.length, 4)}
+        loopAdditionalSlides={3}
         initialSlide={Math.floor(videos.length / 2)}
         speed={500}
         spaceBetween={10}
         grabCursor={!previewMode}
         watchSlidesProgress
         touchRatio={previewMode ? 0 : 1}
-        threshold={5}
-        resistance
-        resistanceRatio={0.55}
+        allowTouchMove={!previewMode}
         onSwiper={(swiper) => {
           swiperRef.current = swiper
-          // Inicia playback assim que o Swiper estiver pronto
-          if (!previewMode) {
-            setTimeout(playAll, 200)
-          }
+          // update() força recalculo após render completo
+          setTimeout(() => {
+            swiper.update()
+            if (!previewMode) playAllIn(swiper.el)
+          }, 300)
         }}
         onSlideChange={handleSlideChange}
+        onSlideChangeTransitionEnd={(swiper) => {
+          if (!previewMode) playAllIn(swiper.el)
+        }}
         style={{ overflow: 'visible' }}
         className="vcw-swiper"
       >
         {videos.map((video, index) => (
-          <SwiperSlide
-            key={video.id}
-            style={{ width: 'var(--slide-width, 170px)', flexShrink: 0 }}
-          >
+          <SwiperSlide key={video.id}>
             <VideoSlide
               video={video}
               settings={settings}
@@ -124,46 +126,44 @@ export function VideoCarousel({
         ))}
       </Swiper>
 
-      {/* Setas de navegação — só desktop, fora do Swiper para não ser clipado */}
+      {/* Setas — fora do Swiper para não serem clipadas */}
       {settings.showArrows && !previewMode && (
         <>
           <button
             onClick={handlePrev}
+            aria-label="Anterior"
             className="absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center"
             style={{
-              left: -18,
-              width: 34,
-              height: 34,
+              left: -14,
+              width: 32,
+              height: 32,
               borderRadius: '50%',
-              background: 'rgba(255,255,255,0.92)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-              border: '1px solid rgba(0,0,0,0.06)',
+              background: 'rgba(255,255,255,0.9)',
+              boxShadow: '0 1px 6px rgba(0,0,0,0.14)',
+              border: '1px solid rgba(0,0,0,0.07)',
               cursor: 'pointer',
-              flexShrink: 0,
             }}
-            aria-label="Anterior"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
           <button
             onClick={handleNext}
+            aria-label="Próximo"
             className="absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center"
             style={{
-              right: -18,
-              width: 34,
-              height: 34,
+              right: -14,
+              width: 32,
+              height: 32,
               borderRadius: '50%',
-              background: 'rgba(255,255,255,0.92)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-              border: '1px solid rgba(0,0,0,0.06)',
+              background: 'rgba(255,255,255,0.9)',
+              boxShadow: '0 1px 6px rgba(0,0,0,0.14)',
+              border: '1px solid rgba(0,0,0,0.07)',
               cursor: 'pointer',
-              flexShrink: 0,
             }}
-            aria-label="Próximo"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>

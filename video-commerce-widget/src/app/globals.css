@@ -2,23 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Dimensões dos slides ── */
-:root {
-  --slide-width: 170px;
-}
-
-@media (min-width: 768px) {
-  :root {
-    --slide-width: 205px;
-  }
-}
-
-@media (min-width: 1024px) {
-  :root {
-    --slide-width: 240px;
-  }
-}
-
 /* ── Swiper: overflow visible para mostrar slides laterais ── */
 .vcw-swiper {
   overflow: visible !important;
@@ -28,26 +11,22 @@
   align-items: center;
 }
 
-/* ── Largura fixa dos slides ── */
-.vcw-swiper .swiper-slide {
-  width: var(--slide-width) !important;
-  flex-shrink: 0;
-}
-
-/* ── vcw-slide-inner: elemento que recebe transform/opacity/shadow ── */
-/* (o overflow:hidden fica no filho para o shadow não ser clipado) */
+/* ── vcw-slide-inner: transição de escala/opacidade ── */
+/* NÃO definir width aqui — Swiper calcula via slidesPerView numérico */
 .vcw-swiper .swiper-slide .vcw-slide-inner {
-  transform: scale(0.92);
-  opacity: 0.72;
+  transform: scale(0.9);
+  opacity: 0.68;
   transition:
     transform 500ms cubic-bezier(0.22, 0.68, 0, 1),
     opacity 500ms cubic-bezier(0.22, 0.68, 0, 1);
+  border-radius: 14px;
+  overflow: hidden;
 }
 
 .vcw-swiper .swiper-slide-active .vcw-slide-inner {
   transform: scale(1);
   opacity: 1;
-  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.18));
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.16));
 }
 
 .vcw-swiper .swiper-slide-prev .vcw-slide-inner,
