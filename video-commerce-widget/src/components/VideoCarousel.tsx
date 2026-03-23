@@ -66,14 +66,6 @@ export function VideoCarousel({
     const timer = setTimeout(() => {
       swiper.update()
       if (!previewMode) playAllIn(swiper.el)
-      console.log('[VCW] after update:', {
-        spv,
-        containerWidth: containerRef.current?.offsetWidth,
-        viewportWidth: window.innerWidth,
-        totalSlides: swiper.slides.length,
-        activeIndex: swiper.activeIndex,
-        realIndex: swiper.realIndex,
-      })
     }, 400)
     return () => clearTimeout(timer)
   }, [spv, previewMode])
@@ -94,6 +86,16 @@ export function VideoCarousel({
    * onSlideChange mapeia realIndex de volta para 0..N-1 via módulo.
    */
   const tripled: VideoItem[] = [...videos, ...videos, ...videos]
+
+  const N = videos.length
+  const prevIdx = (activeIndex - 1 + N) % N
+  const nextIdx = (activeIndex + 1) % N
+
+  function getPreload(logicalIdx: number): 'metadata' | 'none' {
+    return logicalIdx === activeIndex || logicalIdx === prevIdx || logicalIdx === nextIdx
+      ? 'metadata'
+      : 'none'
+  }
 
   const handleSlideChange = useCallback(
     (swiper: SwiperType) => {
@@ -145,19 +147,23 @@ export function VideoCarousel({
         style={{ overflow: 'visible', width: '100%' }}
         className="vcw-swiper"
       >
-        {tripled.map((video, i) => (
-          <SwiperSlide key={`${video.id}-${i}`}>
-            <VideoSlide
-              video={video}
-              settings={settings}
-              isActive={(i % videos.length) === activeIndex}
-              index={i % videos.length}
-              onVideoClick={onVideoClick}
-              onVideoEnded={handleVideoEnded}
-              previewMode={previewMode}
-            />
-          </SwiperSlide>
-        ))}
+        {tripled.map((video, i) => {
+          const logicalIdx = i % N
+          return (
+            <SwiperSlide key={`${video.id}-${i}`}>
+              <VideoSlide
+                video={video}
+                settings={settings}
+                isActive={logicalIdx === activeIndex}
+                index={logicalIdx}
+                onVideoClick={onVideoClick}
+                onVideoEnded={handleVideoEnded}
+                previewMode={previewMode}
+                videoPreload={getPreload(logicalIdx)}
+              />
+            </SwiperSlide>
+          )
+        })}
       </Swiper>
 
       {settings.showArrows && !previewMode && (

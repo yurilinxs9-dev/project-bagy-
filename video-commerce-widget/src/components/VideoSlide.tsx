@@ -12,6 +12,7 @@ interface VideoSlideProps {
   onVideoClick: (index: number) => void
   onVideoEnded: () => void
   previewMode?: boolean
+  videoPreload?: 'none' | 'metadata'
 }
 
 export function VideoSlide({
@@ -22,21 +23,28 @@ export function VideoSlide({
   onVideoClick,
   onVideoEnded,
   previewMode = false,
+  videoPreload = 'none',
 }: VideoSlideProps) {
   const posterRef = useRef<HTMLImageElement>(null)
   const [posterVisible, setPosterVisible] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
 
   const handleVideoPlay = () => {
     setPosterVisible(false)
+    setIsLoading(false)
   }
 
-  const handleVideoPause = () => {
-    // Mantém poster oculto enquanto ainda há conteúdo carregado
+  const handleVideoWaiting = () => {
+    setIsLoading(true)
+  }
+
+  const handleVideoCanPlay = () => {
+    setIsLoading(false)
   }
 
   const handleVideoError = () => {
-    // Mostra o poster se o vídeo falhar
     setPosterVisible(true)
+    setIsLoading(false)
   }
 
   const handleClick = () => {
@@ -44,9 +52,7 @@ export function VideoSlide({
   }
 
   return (
-    // vcw-slide-inner: recebe transform/opacity/shadow do CSS (.swiper-slide-active)
     <div className="vcw-slide-inner" style={{ cursor: previewMode ? 'default' : 'pointer' }}>
-      {/* Conteúdo com overflow hidden para o border-radius funcionar */}
       <div style={{ borderRadius: 14, overflow: 'hidden', background: '#111' }}>
 
         {/* Área do vídeo — aspect ratio 9:16 */}
@@ -75,17 +81,26 @@ export function VideoSlide({
             }}
           />
 
-          {/* Vídeo — src direto com preload none */}
+          {/* Shimmer — quando não há poster ainda */}
+          {!video.posterUrl && isLoading && (
+            <div
+              className="vcw-skeleton"
+              style={{ position: 'absolute', inset: 0, zIndex: 1 }}
+            />
+          )}
+
+          {/* Vídeo */}
           <video
             src={video.videoUrl}
             poster={video.posterUrl}
             muted
             playsInline
-            preload="none"
+            preload={videoPreload}
             loop
             onClick={handleClick}
             onPlay={handleVideoPlay}
-            onPause={handleVideoPause}
+            onWaiting={handleVideoWaiting}
+            onCanPlay={handleVideoCanPlay}
             onError={handleVideoError}
             onEnded={onVideoEnded}
             style={{
@@ -100,8 +115,34 @@ export function VideoSlide({
             }}
           />
 
-          {/* Ícone play apenas no slide ativo e não em preview */}
-          {isActive && !previewMode && (
+          {/* Spinner — slide ativo enquanto carrega */}
+          {isActive && isLoading && !previewMode && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 4,
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  border: '3px solid rgba(255,255,255,0.25)',
+                  borderTopColor: 'rgba(255,255,255,0.85)',
+                  borderRadius: '50%',
+                  animation: 'vcw-spin 0.75s linear infinite',
+                }}
+              />
+            </div>
+          )}
+
+          {/* Ícone play — slide ativo após carregar */}
+          {isActive && !isLoading && !previewMode && (
             <div
               style={{
                 position: 'absolute',

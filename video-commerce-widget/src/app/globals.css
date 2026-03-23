@@ -45,6 +45,11 @@
   to { width: 100%; }
 }
 
+/* ── Spinner de loading ── */
+@keyframes vcw-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Skeleton shimmer ── */
 @keyframes vcw-shimmer {
   0%   { background-position: -200% 0; }
