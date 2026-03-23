@@ -32,10 +32,10 @@ function pauseAllIn(el: HTMLElement | undefined | null) {
   })
 }
 
-function getSlideWidth(vw: number) {
-  if (vw < 768) return 170
-  if (vw < 1024) return 210
-  return 245
+function calcSpv() {
+  if (typeof window === 'undefined') return 5
+  const slideW = window.innerWidth < 768 ? 170 : window.innerWidth < 1024 ? 210 : 245
+  return window.innerWidth / (slideW + 12)
 }
 
 export function VideoCarousel({
@@ -51,58 +51,56 @@ export function VideoCarousel({
   const prevRef = useRef<HTMLButtonElement>(null)
   const nextRef = useRef<HTMLButtonElement>(null)
 
-  // slideWidth calculado no cliente para evitar hydration mismatch
-  const [slideWidth, setSlideWidth] = useState(245)
+  const [spv, setSpv] = useState(5)
 
   useEffect(() => {
-    const update = () => setSlideWidth(getSlideWidth(window.innerWidth))
-    update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
+    const calc = () => setSpv(calcSpv())
+    calc()
+    window.addEventListener('resize', calc)
+    return () => window.removeEventListener('resize', calc)
   }, [])
 
-  // Após montar: recalcula e toca vídeos
   useEffect(() => {
+    const swiper = swiperRef.current
+    if (!swiper) return
     const timer = setTimeout(() => {
-      const swiper = swiperRef.current
-      if (!swiper) return
       swiper.update()
       if (!previewMode) playAllIn(swiper.el)
-      // Diagnóstico
-      console.log('VCW Carousel:', {
+      console.log('[VCW] after update:', {
+        spv,
         containerWidth: containerRef.current?.offsetWidth,
         viewportWidth: window.innerWidth,
-        slideWidth,
-        slidesPerView: swiper.params.slidesPerView,
         totalSlides: swiper.slides.length,
         activeIndex: swiper.activeIndex,
         realIndex: swiper.realIndex,
-        loopAdditionalSlides: swiper.params.loopAdditionalSlides,
       })
-    }, 500)
+    }, 400)
     return () => clearTimeout(timer)
-  }, [videos.length, previewMode, slideWidth])
+  }, [spv, previewMode])
 
   const handleEnter = useCallback(() => {
-    if (!previewMode) {
-      setTimeout(() => playAllIn(swiperRef.current?.el), 150)
-    }
+    if (!previewMode) setTimeout(() => playAllIn(swiperRef.current?.el), 150)
   }, [previewMode])
 
-  const handleLeave = useCallback(() => {
-    pauseAllIn(swiperRef.current?.el)
-  }, [])
+  const handleLeave = useCallback(() => pauseAllIn(swiperRef.current?.el), [])
 
   useIntersection(containerRef, handleEnter, handleLeave)
 
+  /*
+   * Swiper 11: loop é desativado se slides.length < ceil(spv)*2+1.
+   * Com 7 vídeos e spv≈2.4, o mínimo é 7 — borderline que o Swiper rejeita.
+   * Solução: triplicar o array → 21 slides. Loop funciona com folga.
+   * initialSlide = videos.length (7) coloca o início do grupo do meio no centro.
+   * onSlideChange mapeia realIndex de volta para 0..N-1 via módulo.
+   */
+  const tripled: VideoItem[] = [...videos, ...videos, ...videos]
+
   const handleSlideChange = useCallback(
     (swiper: SwiperType) => {
-      onSlideChange(swiper.realIndex)
-      if (!previewMode) {
-        setTimeout(() => playAllIn(swiper.el), 120)
-      }
+      onSlideChange(swiper.realIndex % videos.length)
+      if (!previewMode) setTimeout(() => playAllIn(swiper.el), 120)
     },
-    [onSlideChange, previewMode]
+    [onSlideChange, previewMode, videos.length]
   )
 
   const handleVideoEnded = useCallback(() => {
@@ -115,7 +113,6 @@ export function VideoCarousel({
       className="vcw-carousel"
       style={{
         position: 'relative',
-        // Técnica full-bleed: escapa de qualquer container pai com padding/max-width
         width: '100vw',
         marginLeft: 'calc(-50vw + 50%)',
         overflow: 'hidden',
@@ -124,12 +121,10 @@ export function VideoCarousel({
       }}
     >
       <Swiper
-        // slidesPerView:'auto' + width fixa no slide = layout previsível sem espaço vazio
-        slidesPerView="auto"
+        slidesPerView={spv}
         centeredSlides
         loop
-        loopAdditionalSlides={videos.length * 3}
-        initialSlide={Math.floor(videos.length / 2)}
+        initialSlide={videos.length}          // inicia no começo do grupo do meio
         speed={500}
         spaceBetween={12}
         grabCursor={!previewMode}
@@ -138,6 +133,10 @@ export function VideoCarousel({
         allowTouchMove={!previewMode}
         onSwiper={(swiper) => {
           swiperRef.current = swiper
+          setTimeout(() => {
+            swiper.update()
+            if (!previewMode) playAllIn(swiper.el)
+          }, 500)
         }}
         onSlideChange={handleSlideChange}
         onSlideChangeTransitionEnd={(swiper) => {
@@ -146,13 +145,13 @@ export function VideoCarousel({
         style={{ overflow: 'visible', width: '100%' }}
         className="vcw-swiper"
       >
-        {videos.map((video, index) => (
-          <SwiperSlide key={video.id} style={{ width: slideWidth }}>
+        {tripled.map((video, i) => (
+          <SwiperSlide key={`${video.id}-${i}`}>
             <VideoSlide
               video={video}
               settings={settings}
-              isActive={index === activeIndex}
-              index={index}
+              isActive={(i % videos.length) === activeIndex}
+              index={i % videos.length}
               onVideoClick={onVideoClick}
               onVideoEnded={handleVideoEnded}
               previewMode={previewMode}
@@ -161,7 +160,6 @@ export function VideoCarousel({
         ))}
       </Swiper>
 
-      {/* Setas sobre slides laterais */}
       {settings.showArrows && !previewMode && (
         <>
           <button
@@ -169,21 +167,14 @@ export function VideoCarousel({
             onClick={() => swiperRef.current?.slidePrev()}
             aria-label="Anterior"
             style={{
-              position: 'absolute',
-              top: '50%',
-              left: 16,
-              transform: 'translateY(-50%)',
-              zIndex: 20,
-              width: 38,
-              height: 38,
-              borderRadius: '50%',
+              position: 'absolute', top: '50%', left: 16,
+              transform: 'translateY(-50%)', zIndex: 20,
+              width: 38, height: 38, borderRadius: '50%',
               background: 'rgba(255,255,255,0.9)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
               border: '1px solid rgba(0,0,0,0.07)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              cursor: 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
             }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -195,21 +186,14 @@ export function VideoCarousel({
             onClick={() => swiperRef.current?.slideNext()}
             aria-label="Próximo"
             style={{
-              position: 'absolute',
-              top: '50%',
-              right: 16,
-              transform: 'translateY(-50%)',
-              zIndex: 20,
-              width: 38,
-              height: 38,
-              borderRadius: '50%',
+              position: 'absolute', top: '50%', right: 16,
+              transform: 'translateY(-50%)', zIndex: 20,
+              width: 38, height: 38, borderRadius: '50%',
               background: 'rgba(255,255,255,0.9)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
               border: '1px solid rgba(0,0,0,0.07)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              cursor: 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
             }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

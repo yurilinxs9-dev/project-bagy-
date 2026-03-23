@@ -15,7 +15,7 @@
   "videos": [
     {
       "id": "video-1",
-      "videoUrl": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
       "posterUrl": "https://picsum.photos/seed/v1/480/854",
       "product": {
         "name": "Camisa Transpasse Cintos",
@@ -27,7 +27,7 @@
     },
     {
       "id": "video-2",
-      "videoUrl": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_2MB.mp4",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
       "posterUrl": "https://picsum.photos/seed/v2/480/854",
       "product": {
         "name": "Camisa Ombro a Ombro Regata",
@@ -38,7 +38,7 @@
     },
     {
       "id": "video-3",
-      "videoUrl": "https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
       "posterUrl": "https://picsum.photos/seed/v3/480/854",
       "product": {
         "name": "Colete Cropped Alfaiataria",
@@ -49,7 +49,7 @@
     },
     {
       "id": "video-4",
-      "videoUrl": "https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_2MB.mp4",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
       "posterUrl": "https://picsum.photos/seed/v4/480/854",
       "product": {
         "name": "Calça Reta Botões",
@@ -60,7 +60,7 @@
     },
     {
       "id": "video-5",
-      "videoUrl": "https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_1MB.mp4",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
       "posterUrl": "https://picsum.photos/seed/v5/480/854",
       "product": {
         "name": "Shorts Botões Crepe",
@@ -71,7 +71,7 @@
     },
     {
       "id": "video-6",
-      "videoUrl": "https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_2MB.mp4",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4",
       "posterUrl": "https://picsum.photos/seed/v6/480/854",
       "product": {
         "name": "Macacão Longo Sobreposto",
@@ -82,7 +82,7 @@
     },
     {
       "id": "video-7",
-      "videoUrl": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
       "posterUrl": "https://picsum.photos/seed/v7/480/854",
       "product": {
         "name": "Colete Cinto",
