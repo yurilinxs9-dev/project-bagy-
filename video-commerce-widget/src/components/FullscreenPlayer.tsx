@@ -27,6 +27,7 @@ export function FullscreenPlayer({
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [videoDuration, setVideoDuration] = useState(10)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const total = videos.length
 
@@ -44,13 +45,21 @@ export function FullscreenPlayer({
     if (!video) return
     video.src = videos[currentIndex].videoUrl
     video.load()
-    const play = () => {
-      video.play().catch(() => {})
-      setIsPlaying(true)
-    }
-    video.addEventListener('canplay', play, { once: true })
+
+    // Tenta play imediato (dentro do contexto de gesto do usuário)
+    video.play()
+      .then(() => setIsPlaying(true))
+      .catch(() => {
+        // Se bloqueado (política de autoplay), toca mudo e mostra botão de unmute
+        const onCanPlay = () => {
+          video.muted = true
+          setIsMuted(true)
+          video.play().then(() => setIsPlaying(true)).catch(() => {})
+        }
+        video.addEventListener('canplay', onCanPlay, { once: true })
+      })
+
     return () => {
-      video.removeEventListener('canplay', play)
       video.pause()
       setIsPlaying(false)
     }
@@ -68,6 +77,13 @@ export function FullscreenPlayer({
   const handleEnded = () => {
     goNext()
   }
+
+  const handleUnmute = useCallback(() => {
+    const video = videoRef.current
+    if (!video) return
+    video.muted = false
+    setIsMuted(false)
+  }, [])
 
   // Keyboard navigation
   useEffect(() => {
@@ -164,6 +180,38 @@ export function FullscreenPlayer({
           }}
           onClick={goNext}
         />
+
+        {/* Botão unmute — aparece quando áudio foi bloqueado */}
+        {isMuted && (
+          <button
+            onClick={handleUnmute}
+            aria-label="Ativar som"
+            style={{
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              zIndex: 20,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: 20,
+              background: 'rgba(0,0,0,0.55)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              cursor: 'pointer',
+              color: 'white',
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+              <path d="M11 5L6 9H2v6h4l5 4V5z" />
+              <line x1="23" y1="9" x2="17" y2="15" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              <line x1="17" y1="9" x2="23" y2="15" stroke="white" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Toque para ativar som
+          </button>
+        )}
 
         {/* Botão fechar */}
         <button
