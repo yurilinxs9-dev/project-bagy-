@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 /* ── Swiper: overflow visible para mostrar slides laterais ── */
+.vcw-carousel {
+  overflow: hidden !important;
+}
+
 .vcw-swiper {
   overflow: visible !important;
+  width: 100% !important;
 }
 
 .vcw-swiper .swiper-wrapper {

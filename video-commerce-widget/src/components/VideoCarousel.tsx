@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useCallback, useEffect } from 'react'
+import React, { useRef, useCallback, useEffect, useState } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import type { Swiper as SwiperType } from 'swiper'
 import 'swiper/css'
@@ -32,6 +32,12 @@ function pauseAllIn(el: HTMLElement | undefined | null) {
   })
 }
 
+function getSlideWidth(vw: number) {
+  if (vw < 768) return 170
+  if (vw < 1024) return 210
+  return 245
+}
+
 export function VideoCarousel({
   videos,
   settings,
@@ -45,25 +51,37 @@ export function VideoCarousel({
   const prevRef = useRef<HTMLButtonElement>(null)
   const nextRef = useRef<HTMLButtonElement>(null)
 
-  // Após montar: recalcula layout e toca vídeos
+  // slideWidth calculado no cliente para evitar hydration mismatch
+  const [slideWidth, setSlideWidth] = useState(245)
+
+  useEffect(() => {
+    const update = () => setSlideWidth(getSlideWidth(window.innerWidth))
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  // Após montar: recalcula e toca vídeos
   useEffect(() => {
     const timer = setTimeout(() => {
       const swiper = swiperRef.current
       if (!swiper) return
       swiper.update()
       if (!previewMode) playAllIn(swiper.el)
-      console.log('Swiper config:', {
+      // Diagnóstico
+      console.log('VCW Carousel:', {
+        containerWidth: containerRef.current?.offsetWidth,
+        viewportWidth: window.innerWidth,
+        slideWidth,
         slidesPerView: swiper.params.slidesPerView,
-        loop: swiper.params.loop,
-        loopAdditionalSlides: swiper.params.loopAdditionalSlides,
         totalSlides: swiper.slides.length,
         activeIndex: swiper.activeIndex,
         realIndex: swiper.realIndex,
-        videosLength: videos.length,
+        loopAdditionalSlides: swiper.params.loopAdditionalSlides,
       })
-    }, 300)
+    }, 500)
     return () => clearTimeout(timer)
-  }, [videos.length, previewMode])
+  }, [videos.length, previewMode, slideWidth])
 
   const handleEnter = useCallback(() => {
     if (!previewMode) {
@@ -97,25 +115,23 @@ export function VideoCarousel({
       className="vcw-carousel"
       style={{
         position: 'relative',
-        width: '100%',
+        // Técnica full-bleed: escapa de qualquer container pai com padding/max-width
+        width: '100vw',
+        marginLeft: 'calc(-50vw + 50%)',
         overflow: 'hidden',
         paddingTop: 8,
         paddingBottom: 8,
       }}
     >
       <Swiper
+        // slidesPerView:'auto' + width fixa no slide = layout previsível sem espaço vazio
+        slidesPerView="auto"
         centeredSlides
         loop
-        loopAdditionalSlides={videos.length * 2}
+        loopAdditionalSlides={videos.length * 3}
         initialSlide={Math.floor(videos.length / 2)}
         speed={500}
         spaceBetween={12}
-        slidesPerView={2.3}
-        breakpoints={{
-          768:  { slidesPerView: 3.5, spaceBetween: 14 },
-          1024: { slidesPerView: 5.5, spaceBetween: 16 },
-          1440: { slidesPerView: 6.5, spaceBetween: 16 },
-        }}
         grabCursor={!previewMode}
         watchSlidesProgress
         touchRatio={previewMode ? 0 : 1}
@@ -131,7 +147,7 @@ export function VideoCarousel({
         className="vcw-swiper"
       >
         {videos.map((video, index) => (
-          <SwiperSlide key={video.id}>
+          <SwiperSlide key={video.id} style={{ width: slideWidth }}>
             <VideoSlide
               video={video}
               settings={settings}
@@ -145,7 +161,7 @@ export function VideoCarousel({
         ))}
       </Swiper>
 
-      {/* Setas sobrepostas sobre os slides laterais */}
+      {/* Setas sobre slides laterais */}
       {settings.showArrows && !previewMode && (
         <>
           <button
