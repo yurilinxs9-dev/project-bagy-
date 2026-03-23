@@ -44,9 +44,6 @@ export function VideoCarousel({
   const containerRef = useRef<HTMLDivElement>(null)
   const swiperRef = useRef<SwiperType | null>(null)
 
-  // Loop só faz sentido com slides suficientes para preencher a view
-  const useLoop = videos.length >= 5
-
   // IntersectionObserver no container: play ao entrar, pause ao sair da viewport
   const handleEnter = useCallback(() => {
     if (!previewMode) {
@@ -63,7 +60,6 @@ export function VideoCarousel({
   const handleSlideChange = useCallback(
     (swiper: SwiperType) => {
       onSlideChange(swiper.realIndex)
-      // Re-toca após mudança — garante clones do loop
       if (!previewMode) {
         setTimeout(() => playAllIn(swiper.el), 120)
       }
@@ -82,18 +78,22 @@ export function VideoCarousel({
     <div
       ref={containerRef}
       className="relative vcw-carousel"
-      style={{ paddingTop: 8, paddingBottom: 8 }}
+      style={{
+        paddingTop: 8,
+        paddingBottom: 8,
+        width: '100%',
+        overflow: 'hidden',
+      }}
     >
       <Swiper
-        // ── Slides per view numérico: Swiper calcula larguras internamente ──
-        slidesPerView={1.8}
+        slidesPerView={2.2}
         breakpoints={{
-          768:  { slidesPerView: 3,   spaceBetween: 12 },
-          1024: { slidesPerView: 4.5, spaceBetween: 14 },
+          768:  { slidesPerView: 3.5, spaceBetween: 12 },
+          1024: { slidesPerView: 5.5, spaceBetween: 14 },
         }}
         centeredSlides
-        loop={useLoop}
-        loopAdditionalSlides={useLoop ? 2 : 0}
+        loop
+        loopAdditionalSlides={Math.max(videos.length, 6)}
         initialSlide={Math.floor(videos.length / 2)}
         speed={500}
         spaceBetween={10}
@@ -103,12 +103,10 @@ export function VideoCarousel({
         allowTouchMove={!previewMode}
         onSwiper={(swiper) => {
           swiperRef.current = swiper
-          // update() força recalculo após render completo
           setTimeout(() => {
             swiper.update()
             if (!previewMode) playAllIn(swiper.el)
           }, 300)
-          // segundo update garante layout correto após hidratação
           setTimeout(() => swiper.update(), 500)
         }}
         onSlideChange={handleSlideChange}
@@ -133,44 +131,46 @@ export function VideoCarousel({
         ))}
       </Swiper>
 
-      {/* Setas — fora do Swiper para não serem clipadas */}
+      {/* Setas sobrepostas aos slides laterais, como LV Store */}
       {settings.showArrows && !previewMode && (
         <>
           <button
             onClick={handlePrev}
             aria-label="Anterior"
-            className="absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center"
+            className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center"
             style={{
-              left: -14,
-              width: 32,
-              height: 32,
+              left: 20,
+              zIndex: 20,
+              width: 38,
+              height: 38,
               borderRadius: '50%',
               background: 'rgba(255,255,255,0.9)',
-              boxShadow: '0 1px 6px rgba(0,0,0,0.14)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
               border: '1px solid rgba(0,0,0,0.07)',
               cursor: 'pointer',
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
           <button
             onClick={handleNext}
             aria-label="Próximo"
-            className="absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center"
+            className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center"
             style={{
-              right: -14,
-              width: 32,
-              height: 32,
+              right: 20,
+              zIndex: 20,
+              width: 38,
+              height: 38,
               borderRadius: '50%',
               background: 'rgba(255,255,255,0.9)',
-              boxShadow: '0 1px 6px rgba(0,0,0,0.14)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
               border: '1px solid rgba(0,0,0,0.07)',
               cursor: 'pointer',
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
