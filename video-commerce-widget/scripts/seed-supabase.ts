@@ -13,9 +13,15 @@ async function seed() {
   const videosData = await import('../src/data/videos.json')
   const { videos, settings } = videosData
 
-  console.log('Populando Supabase com UPSERT...')
+  console.log('Limpando tabela videos...')
+  const { error: deleteError } = await supabase.from('videos').delete().neq('id', '')
+  if (deleteError) {
+    console.error('Erro ao limpar videos:', deleteError.message)
+    return
+  }
+  console.log('Tabela limpa.')
 
-  // Upsert videos (atualiza existentes ou insere novos)
+  console.log('Inserindo 7 videos únicos...')
   const rows = videos.map((v, i) => ({
     id: v.id,
     video_url: v.videoUrl,
@@ -29,14 +35,12 @@ async function seed() {
     updated_at: new Date().toISOString(),
   }))
 
-  const { error: videoError } = await supabase
-    .from('videos')
-    .upsert(rows, { onConflict: 'id' })
+  const { error: videoError } = await supabase.from('videos').insert(rows)
 
   if (videoError) {
-    console.error('Erro ao fazer upsert de videos:', videoError.message)
+    console.error('Erro ao inserir videos:', videoError.message)
   } else {
-    console.log(`${rows.length} videos inseridos/atualizados`)
+    console.log(`${rows.length} videos inseridos com sucesso`)
   }
 
   // Upsert settings

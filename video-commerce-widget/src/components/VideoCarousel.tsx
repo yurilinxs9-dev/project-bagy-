@@ -19,13 +19,15 @@ interface VideoCarouselProps {
 }
 
 /** Toca todos os vídeos visíveis no elemento Swiper (original + clones de loop) */
-function playAllIn(el: HTMLElement) {
+function playAllIn(el: HTMLElement | undefined | null) {
+  if (!el) return
   el.querySelectorAll<HTMLVideoElement>('video').forEach((v) => {
     if (v.paused) v.play().catch(() => {})
   })
 }
 
-function pauseAllIn(el: HTMLElement) {
+function pauseAllIn(el: HTMLElement | undefined | null) {
+  if (!el) return
   el.querySelectorAll<HTMLVideoElement>('video').forEach((v) => {
     if (!v.paused) v.pause()
   })
@@ -42,15 +44,18 @@ export function VideoCarousel({
   const containerRef = useRef<HTMLDivElement>(null)
   const swiperRef = useRef<SwiperType | null>(null)
 
+  // Loop só faz sentido com slides suficientes para preencher a view
+  const useLoop = videos.length >= 5
+
   // IntersectionObserver no container: play ao entrar, pause ao sair da viewport
   const handleEnter = useCallback(() => {
-    if (!previewMode && swiperRef.current?.el) {
-      setTimeout(() => playAllIn(swiperRef.current!.el), 150)
+    if (!previewMode) {
+      setTimeout(() => playAllIn(swiperRef.current?.el), 150)
     }
   }, [previewMode])
 
   const handleLeave = useCallback(() => {
-    if (swiperRef.current?.el) pauseAllIn(swiperRef.current.el)
+    pauseAllIn(swiperRef.current?.el)
   }, [])
 
   useIntersection(containerRef, handleEnter, handleLeave)
@@ -87,8 +92,8 @@ export function VideoCarousel({
           1024: { slidesPerView: 4.5, spaceBetween: 14 },
         }}
         centeredSlides
-        loop
-        loopAdditionalSlides={3}
+        loop={useLoop}
+        loopAdditionalSlides={useLoop ? 2 : 0}
         initialSlide={Math.floor(videos.length / 2)}
         speed={500}
         spaceBetween={10}
@@ -103,6 +108,8 @@ export function VideoCarousel({
             swiper.update()
             if (!previewMode) playAllIn(swiper.el)
           }, 300)
+          // segundo update garante layout correto após hidratação
+          setTimeout(() => swiper.update(), 500)
         }}
         onSlideChange={handleSlideChange}
         onSlideChangeTransitionEnd={(swiper) => {
