@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Dimensões dos slides ── */
+:root {
+  --slide-width: 170px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --slide-width: 205px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --slide-width: 240px;
+  }
+}
+
+/* ── Swiper: overflow visible para mostrar slides laterais ── */
+.vcw-swiper {
+  overflow: visible !important;
+}
+
+.vcw-swiper .swiper-wrapper {
+  align-items: center;
+}
+
+/* ── Largura fixa dos slides ── */
+.vcw-swiper .swiper-slide {
+  width: var(--slide-width) !important;
+  flex-shrink: 0;
+}
+
+/* ── vcw-slide-inner: elemento que recebe transform/opacity/shadow ── */
+/* (o overflow:hidden fica no filho para o shadow não ser clipado) */
+.vcw-swiper .swiper-slide .vcw-slide-inner {
+  transform: scale(0.92);
+  opacity: 0.72;
+  transition:
+    transform 500ms cubic-bezier(0.22, 0.68, 0, 1),
+    opacity 500ms cubic-bezier(0.22, 0.68, 0, 1);
+}
+
+.vcw-swiper .swiper-slide-active .vcw-slide-inner {
+  transform: scale(1);
+  opacity: 1;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.18));
+}
+
+.vcw-swiper .swiper-slide-prev .vcw-slide-inner,
+.vcw-swiper .swiper-slide-next .vcw-slide-inner {
+  opacity: 0.82;
+}
+
+/* ── Barra de progresso no fullscreen ── */
+@keyframes vcw-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+/* ── Skeleton shimmer ── */
+@keyframes vcw-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.vcw-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: vcw-shimmer 1.5s infinite;
+}

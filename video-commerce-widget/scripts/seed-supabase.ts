@@ -13,39 +13,36 @@ async function seed() {
   const videosData = await import('../src/data/videos.json')
   const { videos, settings } = videosData
 
-  console.log('Populando Supabase...')
+  console.log('Populando Supabase com UPSERT...')
 
-  // Seed videos
-  const { data: existingVideos } = await supabase.from('videos').select('id').limit(1)
-  if (existingVideos && existingVideos.length > 0) {
-    console.log('Videos ja existem -- pulando')
+  // Upsert videos (atualiza existentes ou insere novos)
+  const rows = videos.map((v, i) => ({
+    id: v.id,
+    video_url: v.videoUrl,
+    poster_url: v.posterUrl,
+    product_name: v.product.name,
+    product_price: v.product.price,
+    product_image: v.product.image,
+    product_url: v.product.url,
+    whatsapp: (v as { whatsapp?: string }).whatsapp ?? null,
+    sort_order: i,
+    updated_at: new Date().toISOString(),
+  }))
+
+  const { error: videoError } = await supabase
+    .from('videos')
+    .upsert(rows, { onConflict: 'id' })
+
+  if (videoError) {
+    console.error('Erro ao fazer upsert de videos:', videoError.message)
   } else {
-    const rows = videos.map((v, i) => ({
-      id: v.id,
-      video_url: v.videoUrl,
-      poster_url: v.posterUrl,
-      product_name: v.product.name,
-      product_price: v.product.price,
-      product_image: v.product.image,
-      product_url: v.product.url,
-      whatsapp: v.whatsapp ?? null,
-      sort_order: i,
-    }))
-    const { error } = await supabase.from('videos').insert(rows)
-    if (error) {
-      console.error('Erro ao inserir videos:', error.message)
-      console.log('Execute o SQL de setup primeiro: npm run setup-db')
-    } else {
-      console.log(`${rows.length} videos inseridos`)
-    }
+    console.log(`${rows.length} videos inseridos/atualizados`)
   }
 
-  // Seed settings
-  const { data: existingSettings } = await supabase.from('settings').select('id').eq('id', 1).single()
-  if (existingSettings) {
-    console.log('Settings ja existem -- pulando')
-  } else {
-    const { error } = await supabase.from('settings').insert({
+  // Upsert settings
+  const { error: settingsError } = await supabase
+    .from('settings')
+    .upsert({
       id: 1,
       whatsapp_default: settings.whatsappDefault,
       accent_color: settings.accentColor,
@@ -58,12 +55,12 @@ async function seed() {
       show_like: settings.showLike,
       add_to_cart_mode: settings.addToCartMode,
       store_url: settings.storeUrl,
-    })
-    if (error) {
-      console.error('Erro ao inserir settings:', error.message)
-    } else {
-      console.log('Settings inseridas')
-    }
+    }, { onConflict: 'id' })
+
+  if (settingsError) {
+    console.error('Erro ao fazer upsert de settings:', settingsError.message)
+  } else {
+    console.log('Settings atualizadas')
   }
 
   console.log('\nSeed concluido!')

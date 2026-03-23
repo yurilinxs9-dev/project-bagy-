@@ -1,0 +1,95 @@
+{
+  "settings": {
+    "whatsappDefault": "5537999999999",
+    "accentColor": "#c8344d",
+    "autoplay": false,
+    "autoplayDelay": 8000,
+    "showArrows": true,
+    "showDots": false,
+    "showWhatsapp": true,
+    "showShare": true,
+    "showLike": true,
+    "addToCartMode": "redirect",
+    "storeUrl": "https://julia-gonitjo-pijamas.bagypro.com"
+  },
+  "videos": [
+    {
+      "id": "video-1",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      "posterUrl": "https://picsum.photos/seed/v1/480/854",
+      "product": {
+        "name": "Camisa Transpasse Cintos",
+        "price": "R$ 299,99",
+        "image": "https://picsum.photos/seed/p1/200/200",
+        "url": "https://julia-gonitjo-pijamas.bagypro.com/camisa-transpasse-cintos"
+      },
+      "whatsapp": "5537999999999"
+    },
+    {
+      "id": "video-2",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+      "posterUrl": "https://picsum.photos/seed/v2/480/854",
+      "product": {
+        "name": "Camisa Ombro a Ombro Regata",
+        "price": "R$ 289,99",
+        "image": "https://picsum.photos/seed/p2/200/200",
+        "url": "https://julia-gonitjo-pijamas.bagypro.com/camisa-ombro-regata"
+      }
+    },
+    {
+      "id": "video-3",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+      "posterUrl": "https://picsum.photos/seed/v3/480/854",
+      "product": {
+        "name": "Colete Cropped Alfaiataria",
+        "price": "R$ 279,99",
+        "image": "https://picsum.photos/seed/p3/200/200",
+        "url": "https://julia-gonitjo-pijamas.bagypro.com/colete-cropped-alfaiataria"
+      }
+    },
+    {
+      "id": "video-4",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+      "posterUrl": "https://picsum.photos/seed/v4/480/854",
+      "product": {
+        "name": "Calça Reta Botões",
+        "price": "R$ 369,99",
+        "image": "https://picsum.photos/seed/p4/200/200",
+        "url": "https://julia-gonitjo-pijamas.bagypro.com/calca-reta-botoes"
+      }
+    },
+    {
+      "id": "video-5",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+      "posterUrl": "https://picsum.photos/seed/v5/480/854",
+      "product": {
+        "name": "Shorts Botões Crepe",
+        "price": "R$ 189,99",
+        "image": "https://picsum.photos/seed/p5/200/200",
+        "url": "https://julia-gonitjo-pijamas.bagypro.com/shorts-botoes-crepe"
+      }
+    },
+    {
+      "id": "video-6",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+      "posterUrl": "https://picsum.photos/seed/v6/480/854",
+      "product": {
+        "name": "Macacão Longo Sobreposto",
+        "price": "R$ 459,99",
+        "image": "https://picsum.photos/seed/p6/200/200",
+        "url": "https://julia-gonitjo-pijamas.bagypro.com/macacao-longo-sobreposto"
+      }
+    },
+    {
+      "id": "video-7",
+      "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+      "posterUrl": "https://picsum.photos/seed/v7/480/854",
+      "product": {
+        "name": "Colete Cinto",
+        "price": "R$ 259,99",
+        "image": "https://picsum.photos/seed/p7/200/200",
+        "url": "https://julia-gonitjo-pijamas.bagypro.com/colete-cinto"
+      }
+    }
+  ]
+}
