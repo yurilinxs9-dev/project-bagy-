@@ -213,11 +213,9 @@ export function FullscreenPlayer({
           </button>
         )}
 
-        {/* Botão fechar */}
+        {/* Botão fechar — sem aria-label/title para não gerar tooltip nativo */}
         <button
           onClick={onClose}
-          aria-label="Fechar"
-          title=""
           style={{
             position: 'absolute',
             top: 12,
@@ -237,7 +235,13 @@ export function FullscreenPlayer({
             lineHeight: 1,
           }}
         >
-          ✕
+          {/* Texto visualmente oculto para screen readers sem gerar tooltip */}
+          <span aria-hidden="true">✕</span>
+          <span style={{
+            position: 'absolute', width: 1, height: 1,
+            overflow: 'hidden', clip: 'rect(0,0,0,0)',
+            whiteSpace: 'nowrap',
+          }}>Fechar</span>
         </button>
 
         {/* Botões laterais */}

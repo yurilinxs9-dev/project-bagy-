@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { VideoItem, WidgetSettings } from '@/types'
 import { ProductCard } from './ProductCard'
 
@@ -25,7 +25,6 @@ export function VideoSlide({
   previewMode = false,
   videoPreload = 'none',
 }: VideoSlideProps) {
-  const posterRef = useRef<HTMLImageElement>(null)
   const [posterVisible, setPosterVisible] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -34,11 +33,18 @@ export function VideoSlide({
     setIsLoading(false)
   }
 
+  // Ao pausar: volta a mostrar o poster (slide ficou inativo)
+  const handleVideoPause = () => {
+    setPosterVisible(true)
+    setIsLoading(true)
+  }
+
   const handleVideoWaiting = () => {
     setIsLoading(true)
   }
 
   const handleVideoCanPlay = () => {
+    if (!isLoading) return // já carregado
     setIsLoading(false)
   }
 
@@ -47,20 +53,24 @@ export function VideoSlide({
     setIsLoading(false)
   }
 
-  const handleClick = () => {
+  // Clique em qualquer parte do slide abre o fullscreen
+  const handleSlideClick = () => {
     if (!previewMode) onVideoClick(index)
   }
 
   return (
-    <div className="vcw-slide-inner" style={{ cursor: previewMode ? 'default' : 'pointer' }}>
+    <div
+      className="vcw-slide-inner"
+      style={{ cursor: previewMode ? 'default' : 'pointer' }}
+      onClick={handleSlideClick}
+    >
       <div style={{ borderRadius: 14, overflow: 'hidden', background: '#111' }}>
 
         {/* Área do vídeo — aspect ratio 9:16 */}
         <div style={{ position: 'relative', paddingTop: '177.78%' }}>
 
-          {/* Poster overlay — visível até o vídeo tocar */}
+          {/* Poster overlay — visível enquanto pausado ou carregando */}
           <img
-            ref={posterRef}
             src={video.posterUrl}
             alt={video.product.name}
             loading="lazy"
@@ -81,7 +91,7 @@ export function VideoSlide({
             }}
           />
 
-          {/* Shimmer — quando não há poster ainda */}
+          {/* Shimmer — quando não há poster */}
           {!video.posterUrl && isLoading && (
             <div
               className="vcw-skeleton"
@@ -89,7 +99,7 @@ export function VideoSlide({
             />
           )}
 
-          {/* Vídeo */}
+          {/* Vídeo — sem controles nativos, clique gerenciado pelo div pai */}
           <video
             src={video.videoUrl}
             poster={video.posterUrl}
@@ -97,8 +107,8 @@ export function VideoSlide({
             playsInline
             preload={videoPreload}
             loop
-            onClick={handleClick}
             onPlay={handleVideoPlay}
+            onPause={handleVideoPause}
             onWaiting={handleVideoWaiting}
             onCanPlay={handleVideoCanPlay}
             onError={handleVideoError}
@@ -112,6 +122,7 @@ export function VideoSlide({
               objectPosition: 'center top',
               zIndex: 0,
               display: 'block',
+              pointerEvents: 'none', // clique gerenciado pelo div pai
             }}
           />
 

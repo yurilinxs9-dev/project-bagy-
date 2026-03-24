@@ -18,18 +18,19 @@ interface VideoCarouselProps {
   previewMode?: boolean
 }
 
-function playAllIn(el: HTMLElement | undefined | null) {
-  if (!el) return
-  el.querySelectorAll<HTMLVideoElement>('video').forEach((v) => {
-    if (v.paused) v.play().catch(() => {})
-  })
-}
-
+/** Pausa todos os vídeos no container */
 function pauseAllIn(el: HTMLElement | undefined | null) {
   if (!el) return
   el.querySelectorAll<HTMLVideoElement>('video').forEach((v) => {
     if (!v.paused) v.pause()
   })
+}
+
+/** Pausa todos e toca APENAS o slide ativo */
+function playActiveOnly(swiper: SwiperType) {
+  pauseAllIn(swiper.el)
+  const activeEl = swiper.slides?.[swiper.activeIndex]
+  activeEl?.querySelector<HTMLVideoElement>('video')?.play().catch(() => {})
 }
 
 function calcSpv() {
@@ -54,7 +55,7 @@ export function VideoCarousel({
   const [spv, setSpv] = useState(5)
 
   useEffect(() => {
-    // Cap em N-0.5 para nunca mostrar ≥N slides ao mesmo tempo (evita duplicatas entre grupos)
+    // Cap em N-0.5: nunca mostrar ≥N slides ao mesmo tempo (evita duplicatas entre grupos)
     const calc = () => setSpv(Math.min(calcSpv(), videos.length - 0.5))
     calc()
     window.addEventListener('resize', calc)
@@ -66,13 +67,18 @@ export function VideoCarousel({
     if (!swiper) return
     const timer = setTimeout(() => {
       swiper.update()
-      if (!previewMode) playAllIn(swiper.el)
+      if (!previewMode) playActiveOnly(swiper)
     }, 400)
     return () => clearTimeout(timer)
   }, [spv, previewMode])
 
   const handleEnter = useCallback(() => {
-    if (!previewMode) setTimeout(() => playAllIn(swiperRef.current?.el), 150)
+    if (!previewMode) {
+      setTimeout(() => {
+        const swiper = swiperRef.current
+        if (swiper) playActiveOnly(swiper)
+      }, 150)
+    }
   }, [previewMode])
 
   const handleLeave = useCallback(() => pauseAllIn(swiperRef.current?.el), [])
@@ -80,11 +86,10 @@ export function VideoCarousel({
   useIntersection(containerRef, handleEnter, handleLeave)
 
   /*
-   * Swiper 11: loop é desativado se slides.length < ceil(spv)*2+1.
-   * Com 7 vídeos e spv≈2.4, o mínimo é 7 — borderline que o Swiper rejeita.
-   * Solução: triplicar o array → 21 slides. Loop funciona com folga.
-   * initialSlide = videos.length (7) coloca o início do grupo do meio no centro.
-   * onSlideChange mapeia realIndex de volta para 0..N-1 via módulo.
+   * Swiper 11: loop desativado se slides.length < ceil(spv)*2+1.
+   * Triplicar → 21 slides garante loop com folga para qualquer spv ≤ N-0.5.
+   * initialSlide = videos.length (7) → começo do grupo do meio.
+   * onSlideChange mapeia realIndex → 0..N-1 via módulo.
    */
   const tripled: VideoItem[] = [...videos, ...videos, ...videos]
 
@@ -101,7 +106,9 @@ export function VideoCarousel({
   const handleSlideChange = useCallback(
     (swiper: SwiperType) => {
       onSlideChange(swiper.realIndex % videos.length)
-      if (!previewMode) setTimeout(() => playAllIn(swiper.el), 120)
+      if (!previewMode) {
+        setTimeout(() => playActiveOnly(swiper), 120)
+      }
     },
     [onSlideChange, previewMode, videos.length]
   )
@@ -127,7 +134,7 @@ export function VideoCarousel({
         slidesPerView={spv}
         centeredSlides
         loop
-        initialSlide={videos.length}          // inicia no começo do grupo do meio
+        initialSlide={videos.length}
         speed={500}
         spaceBetween={12}
         grabCursor={!previewMode}
@@ -138,12 +145,12 @@ export function VideoCarousel({
           swiperRef.current = swiper
           setTimeout(() => {
             swiper.update()
-            if (!previewMode) playAllIn(swiper.el)
+            if (!previewMode) playActiveOnly(swiper)
           }, 500)
         }}
         onSlideChange={handleSlideChange}
         onSlideChangeTransitionEnd={(swiper) => {
-          if (!previewMode) playAllIn(swiper.el)
+          if (!previewMode) playActiveOnly(swiper)
         }}
         style={{ overflow: 'visible', width: '100%' }}
         className="vcw-swiper"
