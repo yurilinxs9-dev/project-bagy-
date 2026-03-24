@@ -83,10 +83,16 @@ export async function getVideos(storeSlug?: string): Promise<VideoItem[]> {
       .order('sort_order', { ascending: true })
 
     if (storeSlug) {
-      const storeId = await getStoreId(storeSlug)
-      if (!storeId) return []
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      query = (query as any).eq('store_id', storeId)
+      try {
+        const storeId = await getStoreId(storeSlug)
+        if (storeId) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          query = (query as any).eq('store_id', storeId)
+        }
+        // storeId null = loja não encontrada ou migração não rodada → retorna todos
+      } catch {
+        // tabela stores não existe → retorna todos os vídeos sem filtro
+      }
     }
 
     const { data, error } = await query
@@ -184,16 +190,25 @@ export async function getSettings(storeSlug?: string): Promise<WidgetSettings> {
     let row: Record<string, unknown> | null = null
 
     if (storeSlug) {
-      const storeId = await getStoreId(storeSlug)
-      if (!storeId) throw new Error('Store not found')
-      const { data, error } = await supabaseAdmin
-        .from('settings')
-        .select('*')
-        .eq('store_id', storeId)
-        .single()
-      if (error) throw error
-      row = data as Record<string, unknown>
-    } else {
+      try {
+        const storeId = await getStoreId(storeSlug)
+        if (storeId) {
+          const { data, error } = await supabaseAdmin
+            .from('settings')
+            .select('*')
+            .eq('store_id', storeId)
+            .single()
+          if (!error && data) {
+            row = data as Record<string, unknown>
+          }
+        }
+        // storeId null ou settings não encontrado → tenta fallback id=1
+      } catch {
+        // tabela stores não existe → tenta fallback id=1
+      }
+    }
+
+    if (!row) {
       const { data, error } = await supabaseAdmin
         .from('settings')
         .select('*')
