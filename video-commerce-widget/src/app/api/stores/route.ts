@@ -9,9 +9,8 @@ export async function GET() {
     const stores = await getStores()
     return Response.json(stores)
   } catch (err) {
-    console.error('[GET /api/stores] erro:', err)
-    const msg = err instanceof Error ? err.message : String(err)
-    return Response.json({ error: msg }, { status: 500 })
+    console.error('GET /api/stores error:', err)
+    return Response.json([], { status: 200 })
   }
 }
 

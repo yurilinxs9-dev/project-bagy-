@@ -16,19 +16,27 @@ async function getStoreId(slug: string): Promise<string | null> {
 // ── Stores ─────────────────────────────────────────────────────────────────────
 
 export async function getStores(): Promise<Store[]> {
-  const { data, error } = await supabaseAdmin
-    .from('stores')
-    .select('*')
-    .order('created_at', { ascending: true })
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('stores')
+      .select('*')
+      .order('created_at', { ascending: true })
 
-  if (error) throw error
-  return (data ?? []).map((row: Record<string, unknown>) => ({
-    id: row.id as string,
-    name: row.name as string,
-    slug: row.slug as string,
-    storeUrl: row.store_url as string,
-    createdAt: row.created_at as string,
-  }))
+    if (error) {
+      console.error('getStores error:', JSON.stringify(error))
+      return []
+    }
+    return (data ?? []).map((row: Record<string, unknown>) => ({
+      id: row.id as string,
+      name: row.name as string,
+      slug: row.slug as string,
+      storeUrl: row.store_url as string,
+      createdAt: row.created_at as string,
+    }))
+  } catch (err) {
+    console.error('getStores exception:', err)
+    return []
+  }
 }
 
 export async function addStore(
