@@ -54,11 +54,12 @@ export function VideoCarousel({
   const [spv, setSpv] = useState(5)
 
   useEffect(() => {
-    const calc = () => setSpv(calcSpv())
+    // Cap em N-0.5 para nunca mostrar ≥N slides ao mesmo tempo (evita duplicatas entre grupos)
+    const calc = () => setSpv(Math.min(calcSpv(), videos.length - 0.5))
     calc()
     window.addEventListener('resize', calc)
     return () => window.removeEventListener('resize', calc)
-  }, [])
+  }, [videos.length])
 
   useEffect(() => {
     const swiper = swiperRef.current

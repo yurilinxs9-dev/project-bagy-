@@ -217,6 +217,7 @@ export function FullscreenPlayer({
         <button
           onClick={onClose}
           aria-label="Fechar"
+          title=""
           style={{
             position: 'absolute',
             top: 12,
