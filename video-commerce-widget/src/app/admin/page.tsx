@@ -14,9 +14,15 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetch('/api/stores')
-      .then((r) => r.json())
-      .then(setStores)
-      .catch(() => showToast('Erro ao carregar lojas'))
+      .then(async (r) => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
+        return data
+      })
+      .then((data) => {
+        if (Array.isArray(data)) setStores(data)
+      })
+      .catch((err) => showToast(`Erro ao carregar lojas: ${err.message}`))
       .finally(() => setLoading(false))
   }, [])
 
