@@ -1,10 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { JSDOM } from 'jsdom'
+
+export const dynamic = 'force-dynamic'
+
+// ── Helpers de extração por regex ─────────────────────────────────────────────
+
+function extractMeta(html: string, property: string): string {
+  const re = new RegExp(
+    `<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']+)["']`,
+    'i'
+  )
+  const m = html.match(re) ||
+    html.match(new RegExp(
+      `<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${property}["']`,
+      'i'
+    ))
+  return m ? decode(m[1].trim()) : ''
+}
+
+function extractH1(html: string): string {
+  const m = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
+  if (!m) return ''
+  return decode(stripTags(m[1])).replace(/\s+/g, ' ').trim()
+}
+
+function extractPrice(html: string): string {
+  // 1. class="total" dentro de product-price-final
+  let m = html.match(/product-price-final[\s\S]{0,300}?class=["'][^"']*total[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i)
+  if (m) {
+    const t = decode(stripTags(m[1])).replace(/\s+/g, ' ').trim()
+    if (t) return t
+  }
+  // 2. itemprop="price" content=
+  m = html.match(/itemprop=["']price["'][^>]+content=["']([^"']+)["']/i) ||
+    html.match(/content=["']([^"']+)["'][^>]+itemprop=["']price["']/i)
+  if (m) {
+    const val = m[1].trim()
+    if (val) return `R$ ${parseFloat(val).toFixed(2).replace('.', ',')}`
+  }
+  // 3. class contendo price-final ou price_final
+  m = html.match(/class=["'][^"']*price[-_]final[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i)
+  if (m) {
+    const t = decode(stripTags(m[1])).replace(/\s+/g, ' ').trim()
+    if (t) return t
+  }
+  // 4. fallback: primeiro R$ XX no HTML
+  m = html.match(/R\$\s*[\d.,]+/)
+  return m ? m[0].trim() : ''
+}
+
+function extractImage(html: string, baseUrl: string): string {
+  // 1. og:image
+  let img = extractMeta(html, 'og:image')
+  if (img) return img
+
+  // 2. <img> cujo src contenha cdn.dooca.store ou "produto" ou "product"
+  const imgRe = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi
+  let m: RegExpExecArray | null
+  while ((m = imgRe.exec(html)) !== null) {
+    const src = m[1]
+    if (
+      !src.startsWith('data:') &&
+      (src.includes('cdn.dooca') ||
+        src.includes('produto') ||
+        src.includes('product') ||
+        src.includes('cdn.shopify') ||
+        src.includes('vteximg'))
+    ) {
+      return src.startsWith('http') ? src : new URL(src, baseUrl).href
+    }
+  }
+
+  // 3. data-src como fallback (lazy loading)
+  const dataSrcRe = /<img[^>]+data-src=["']([^"']+)["'][^>]*>/i
+  const ds = html.match(dataSrcRe)
+  if (ds && !ds[1].startsWith('data:')) {
+    return ds[1].startsWith('http') ? ds[1] : new URL(ds[1], baseUrl).href
+  }
+
+  return ''
+}
+
+function stripTags(s: string): string {
+  return s.replace(/<[^>]+>/g, '')
+}
+
+function decode(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+}
+
+// ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}))
-  const { url } = body as { url?: string }
+  let body: { url?: string } = {}
+  try { body = await req.json() } catch { /* json inválido */ }
 
+  const { url } = body
   if (!url) {
     return NextResponse.json({ error: 'URL obrigatória' }, { status: 400 })
   }
@@ -31,73 +127,13 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const dom = new JSDOM(html)
-  const doc = dom.window.document
-
-  // ── Nome ─────────────────────────────────────────────────────────────────────
-  const name =
-    doc.querySelector('h1')?.textContent?.trim() ||
-    doc
-      .querySelector('meta[property="og:title"]')
-      ?.getAttribute('content')
-      ?.trim() ||
-    ''
-
-  // ── Preço ─────────────────────────────────────────────────────────────────────
-  // Tenta seletores comuns de plataformas BR
-  const priceSelectors = [
-    '.product-price-final .total',
-    '.product-price-final',
-    '.price-final',
-    '[class*="price-final"]',
-    '[class*="price_final"]',
-    '.product__price',
-    '[class*="product-price"]',
-    '[itemprop="price"]',
-  ]
-  let price = ''
-  for (const sel of priceSelectors) {
-    const el = doc.querySelector(sel)
-    if (el?.textContent?.trim()) {
-      price = el.textContent.trim()
-      break
-    }
-  }
-  // Fallback: regex para R$ XX,XX no HTML
-  if (!price) {
-    const match = html.match(/R\$\s*[\d.,]+/)
-    if (match) price = match[0].trim()
-  }
-
-  // ── Imagem ───────────────────────────────────────────────────────────────────
-  // og:image é o mais confiável
-  let image =
-    doc
-      .querySelector('meta[property="og:image"]')
-      ?.getAttribute('content') || ''
-
-  if (!image) {
-    // Seletores para área do produto
-    const imgSelectors = [
-      '.product-image img',
-      '.product__image img',
-      '.swiper-slide img',
-      '[class*="product-image"] img',
-      '[class*="product-gallery"] img',
-    ]
-    for (const sel of imgSelectors) {
-      const el = doc.querySelector(sel) as HTMLImageElement | null
-      const src = el?.getAttribute('src') || el?.getAttribute('data-src') || ''
-      if (src && !src.includes('data:image')) {
-        image = src.startsWith('http') ? src : new URL(src, url).href
-        break
-      }
-    }
-  }
+  const name = extractH1(html) || extractMeta(html, 'og:title')
+  const price = extractPrice(html)
+  const image = extractImage(html, url)
 
   return NextResponse.json({
-    name: name.replace(/\s+/g, ' '),
-    price: price.replace(/\s+/g, ' '),
+    name: name.replace(/\s+/g, ' ').trim(),
+    price: price.replace(/\s+/g, ' ').trim(),
     image,
   })
 }
