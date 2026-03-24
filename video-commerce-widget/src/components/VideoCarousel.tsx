@@ -26,7 +26,7 @@ function pauseAllIn(el: HTMLElement | undefined | null) {
   })
 }
 
-/** Pausa todos e toca APENAS o slide ativo */
+/** Pausa todos e toca APENAS o slide fisicamente ativo */
 function playActiveOnly(swiper: SwiperType) {
   pauseAllIn(swiper.el)
   const activeEl = swiper.slides?.[swiper.activeIndex]
@@ -35,7 +35,8 @@ function playActiveOnly(swiper: SwiperType) {
 
 function calcSpv() {
   if (typeof window === 'undefined') return 5
-  const slideW = window.innerWidth < 768 ? 170 : window.innerWidth < 1024 ? 210 : 245
+  const slideW =
+    window.innerWidth < 768 ? 170 : window.innerWidth < 1024 ? 210 : 245
   return window.innerWidth / (slideW + 12)
 }
 
@@ -53,14 +54,18 @@ export function VideoCarousel({
   const nextRef = useRef<HTMLButtonElement>(null)
 
   const [spv, setSpv] = useState(5)
+  // Índice físico do slide ativo no array triplicado (0..TOTAL-1)
+  const [physicalActiveIdx, setPhysicalActiveIdx] = useState(videos.length)
+
+  const N = videos.length
+  const TOTAL = N * 3
 
   useEffect(() => {
-    // Cap em N-0.5: nunca mostrar ≥N slides ao mesmo tempo (evita duplicatas entre grupos)
-    const calc = () => setSpv(Math.min(calcSpv(), videos.length - 0.5))
+    const calc = () => setSpv(Math.min(calcSpv(), N - 0.5))
     calc()
     window.addEventListener('resize', calc)
     return () => window.removeEventListener('resize', calc)
-  }, [videos.length])
+  }, [N])
 
   useEffect(() => {
     const swiper = swiperRef.current
@@ -81,36 +86,24 @@ export function VideoCarousel({
     }
   }, [previewMode])
 
-  const handleLeave = useCallback(() => pauseAllIn(swiperRef.current?.el), [])
+  const handleLeave = useCallback(
+    () => pauseAllIn(swiperRef.current?.el),
+    []
+  )
 
   useIntersection(containerRef, handleEnter, handleLeave)
 
-  /*
-   * Swiper 11: loop desativado se slides.length < ceil(spv)*2+1.
-   * Triplicar → 21 slides garante loop com folga para qualquer spv ≤ N-0.5.
-   * initialSlide = videos.length (7) → começo do grupo do meio.
-   * onSlideChange mapeia realIndex → 0..N-1 via módulo.
-   */
   const tripled: VideoItem[] = [...videos, ...videos, ...videos]
-
-  const N = videos.length
-  const prevIdx = (activeIndex - 1 + N) % N
-  const nextIdx = (activeIndex + 1) % N
-
-  function getPreload(logicalIdx: number): 'metadata' | 'none' {
-    return logicalIdx === activeIndex || logicalIdx === prevIdx || logicalIdx === nextIdx
-      ? 'metadata'
-      : 'none'
-  }
 
   const handleSlideChange = useCallback(
     (swiper: SwiperType) => {
-      onSlideChange(swiper.realIndex % videos.length)
+      setPhysicalActiveIdx(swiper.activeIndex)
+      onSlideChange(swiper.realIndex % N)
       if (!previewMode) {
         setTimeout(() => playActiveOnly(swiper), 120)
       }
     },
-    [onSlideChange, previewMode, videos.length]
+    [onSlideChange, previewMode, N]
   )
 
   const handleVideoEnded = useCallback(() => {
@@ -134,15 +127,15 @@ export function VideoCarousel({
         slidesPerView={spv}
         centeredSlides
         loop
-        initialSlide={videos.length}
+        initialSlide={N}
         speed={500}
         spaceBetween={12}
         grabCursor={!previewMode}
-        watchSlidesProgress
         touchRatio={previewMode ? 0 : 1}
         allowTouchMove={!previewMode}
         onSwiper={(swiper) => {
           swiperRef.current = swiper
+          setPhysicalActiveIdx(swiper.activeIndex)
           setTimeout(() => {
             swiper.update()
             if (!previewMode) playActiveOnly(swiper)
@@ -157,6 +150,14 @@ export function VideoCarousel({
       >
         {tripled.map((video, i) => {
           const logicalIdx = i % N
+          // Distância até o slide ativo (com wrap-around circular no array triplicado)
+          const dist = Math.min(
+            Math.abs(i - physicalActiveIdx),
+            TOTAL - Math.abs(i - physicalActiveIdx)
+          )
+          // Apenas active±1 têm elemento <video> no DOM
+          const showVideo = dist <= 1
+
           return (
             <SwiperSlide key={`${video.id}-${i}`}>
               <VideoSlide
@@ -164,10 +165,11 @@ export function VideoCarousel({
                 settings={settings}
                 isActive={logicalIdx === activeIndex}
                 index={logicalIdx}
+                showVideo={showVideo}
                 onVideoClick={onVideoClick}
                 onVideoEnded={handleVideoEnded}
                 previewMode={previewMode}
-                videoPreload={getPreload(logicalIdx)}
+                videoPreload={showVideo ? 'metadata' : 'none'}
               />
             </SwiperSlide>
           )
@@ -181,17 +183,33 @@ export function VideoCarousel({
             onClick={() => swiperRef.current?.slidePrev()}
             aria-label="Anterior"
             style={{
-              position: 'absolute', top: '50%', left: 16,
-              transform: 'translateY(-50%)', zIndex: 20,
-              width: 38, height: 38, borderRadius: '50%',
+              position: 'absolute',
+              top: '50%',
+              left: 16,
+              transform: 'translateY(-50%)',
+              zIndex: 20,
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
               background: 'rgba(255,255,255,0.9)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
               border: '1px solid rgba(0,0,0,0.07)',
-              cursor: 'pointer', display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
@@ -200,17 +218,33 @@ export function VideoCarousel({
             onClick={() => swiperRef.current?.slideNext()}
             aria-label="Próximo"
             style={{
-              position: 'absolute', top: '50%', right: 16,
-              transform: 'translateY(-50%)', zIndex: 20,
-              width: 38, height: 38, borderRadius: '50%',
+              position: 'absolute',
+              top: '50%',
+              right: 16,
+              transform: 'translateY(-50%)',
+              zIndex: 20,
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
               background: 'rgba(255,255,255,0.9)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
               border: '1px solid rgba(0,0,0,0.07)',
-              cursor: 'pointer', display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>

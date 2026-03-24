@@ -1,23 +1,28 @@
-import { setVideos } from '@/lib/kv'
+import { reorderVideos } from '@/lib/kv'
 import { requireAuth } from '@/lib/auth'
-import { VideoItem } from '@/types'
 
 export async function PUT(request: Request) {
   if (!(await requireAuth())) {
     return Response.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  let videos: VideoItem[]
+  let body: unknown
   try {
-    videos = await request.json()
+    body = await request.json()
   } catch {
     return Response.json({ error: 'JSON inválido' }, { status: 400 })
   }
 
-  if (!Array.isArray(videos)) {
-    return Response.json({ error: 'Esperado um array de vídeos' }, { status: 400 })
+  if (!Array.isArray(body)) {
+    return Response.json({ error: 'Esperado array' }, { status: 400 })
   }
 
-  await setVideos(videos)
+  // Aceita VideoItem[] (backward compat) ou string[]
+  const videoIds: string[] =
+    body.length > 0 && typeof body[0] === 'object'
+      ? (body as { id: string }[]).map((v) => v.id)
+      : (body as string[])
+
+  await reorderVideos(videoIds)
   return Response.json({ success: true })
 }

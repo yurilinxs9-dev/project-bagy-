@@ -6,6 +6,7 @@ declare global {
   interface Window {
     __VIDEO_WIDGET_CONFIG__?: import('../types').WidgetConfig
     __VIDEO_WIDGET_API_URL__?: string
+    __VIDEO_WIDGET_STORE__?: string
   }
 }
 
@@ -25,10 +26,12 @@ async function loadConfig() {
   }
   // Prioridade 2: fetch da API
   const apiUrl = window.__VIDEO_WIDGET_API_URL__ ?? ''
+  const store = window.__VIDEO_WIDGET_STORE__
+  const storeParam = store ? `?store=${encodeURIComponent(store)}` : ''
   try {
     const [videosRes, settingsRes] = await Promise.all([
-      fetch(`${apiUrl}/api/videos`),
-      fetch(`${apiUrl}/api/settings`),
+      fetch(`${apiUrl}/api/videos${storeParam}`),
+      fetch(`${apiUrl}/api/settings${storeParam}`),
     ])
     const videos = await videosRes.json()
     const settings = await settingsRes.json()
@@ -39,7 +42,6 @@ async function loadConfig() {
 }
 
 async function mount() {
-  // Encontrar ou criar elemento root
   let root = document.getElementById('video-commerce-widget')
   if (!root) {
     root = document.createElement('div')

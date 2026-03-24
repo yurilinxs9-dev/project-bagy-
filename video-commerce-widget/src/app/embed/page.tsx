@@ -1,10 +1,15 @@
 import { VideoShowcase } from '@/components/VideoShowcase'
 
-export const metadata = {
-  title: 'Widget',
-}
+export const dynamic = 'force-dynamic'
 
-export default function EmbedPage() {
+export default function EmbedPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
+  const storeSlug =
+    typeof searchParams.store === 'string' ? searchParams.store : undefined
+
   return (
     <>
       <style>{`
@@ -16,7 +21,7 @@ export default function EmbedPage() {
           -webkit-overflow-scrolling: touch;
         }
       `}</style>
-      <VideoShowcase />
+      <VideoShowcase storeSlug={storeSlug} />
     </>
   )
 }

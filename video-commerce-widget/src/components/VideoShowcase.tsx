@@ -9,9 +9,10 @@ import videosJson from '@/data/videos.json'
 
 interface VideoShowcaseProps {
   config?: WidgetConfig
+  storeSlug?: string
 }
 
-export function VideoShowcase({ config: configProp }: VideoShowcaseProps) {
+export function VideoShowcase({ config: configProp, storeSlug }: VideoShowcaseProps) {
   const [config, setConfig] = useState<WidgetConfig | null>(configProp ?? null)
   const [loading, setLoading] = useState(!configProp)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -19,28 +20,38 @@ export function VideoShowcase({ config: configProp }: VideoShowcaseProps) {
   const [fullscreenIndex, setFullscreenIndex] = useState(0)
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
 
-  // Fetch dados da API se não passado via prop
   useEffect(() => {
     if (configProp) return
     const apiUrl =
       typeof window !== 'undefined'
-        ? (window as typeof window & { __VIDEO_WIDGET_API_URL__?: string })
-            .__VIDEO_WIDGET_API_URL__ ?? ''
+        ? (
+            window as typeof window & {
+              __VIDEO_WIDGET_API_URL__?: string
+            }
+          ).__VIDEO_WIDGET_API_URL__ ?? ''
         : ''
 
+    const slug =
+      storeSlug ??
+      (typeof window !== 'undefined'
+        ? (window as typeof window & { __VIDEO_WIDGET_STORE__?: string })
+            .__VIDEO_WIDGET_STORE__
+        : undefined)
+
+    const storeParam = slug ? `?store=${encodeURIComponent(slug)}` : ''
+
     Promise.all([
-      fetch(`${apiUrl}/api/videos`).then((r) => r.json()),
-      fetch(`${apiUrl}/api/settings`).then((r) => r.json()),
+      fetch(`${apiUrl}/api/videos${storeParam}`).then((r) => r.json()),
+      fetch(`${apiUrl}/api/settings${storeParam}`).then((r) => r.json()),
     ])
       .then(([videos, settings]) => {
         setConfig({ videos, settings })
       })
       .catch(() => {
-        // Fallback para JSON estático embutido
         setConfig(videosJson as WidgetConfig)
       })
       .finally(() => setLoading(false))
-  }, [configProp])
+  }, [configProp, storeSlug])
 
   const handleSlideChange = useCallback((index: number) => {
     setActiveIndex(index)

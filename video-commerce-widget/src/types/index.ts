@@ -29,3 +29,11 @@ export interface WidgetConfig {
   videos: VideoItem[]
   settings: WidgetSettings
 }
+
+export interface Store {
+  id: string
+  name: string
+  slug: string
+  storeUrl: string
+  createdAt: string
+}

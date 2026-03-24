@@ -1,182 +1,61 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { VideoItem, WidgetConfig } from '@/types'
-import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
-import { WidgetPreview } from '@/components/admin/WidgetPreview'
-
-// ── Card arrastável ──────────────────────────────────────────────────────────
-
-function SortableVideoCard({
-  video,
-  index,
-  onRemove,
-}: {
-  video: VideoItem
-  index: number
-  onRemove: (id: string) => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: video.id })
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4"
-    >
-      {/* Drag handle */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing text-xl flex-shrink-0 select-none"
-        aria-label="Arrastar"
-      >
-        ⠿
-      </button>
-
-      {/* Posição */}
-      <span className="text-2xl font-bold text-gray-200 w-6 flex-shrink-0 select-none">
-        {index + 1}
-      </span>
-
-      {/* Poster */}
-      <img
-        src={video.posterUrl}
-        alt={video.product.name}
-        className="w-10 h-14 object-cover rounded-lg flex-shrink-0"
-        onError={(e) => (e.currentTarget.style.display = 'none')}
-      />
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-gray-900 truncate">{video.product.name}</p>
-        <p className="text-sm text-gray-500">{video.product.price}</p>
-        <p className="text-xs text-gray-400 truncate">{video.videoUrl}</p>
-      </div>
-
-      {/* Ações */}
-      <div className="flex gap-2 flex-shrink-0">
-        <Link
-          href={`/admin/videos/${video.id}`}
-          className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          Editar
-        </Link>
-        <button
-          onClick={() => onRemove(video.id)}
-          className="text-sm px-3 py-1.5 border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-        >
-          Remover
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Página principal ─────────────────────────────────────────────────────────
+import { Store } from '@/types'
 
 export default function AdminPage() {
-  const [videos, setVideos] = useState<VideoItem[]>([])
-  const [settings, setSettings] = useState<WidgetConfig['settings'] | null>(null)
+  const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [newStore, setNewStore] = useState({ name: '', slug: '', storeUrl: '' })
+  const [creating, setCreating] = useState(false)
   const [toast, setToast] = useState('')
-  const [confirmId, setConfirmId] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
-
-  const fetchData = useCallback(async () => {
-    try {
-      const [videosRes, settingsRes] = await Promise.all([
-        fetch('/api/videos'),
-        fetch('/api/settings'),
-      ])
-      setVideos(await videosRes.json())
-      setSettings(await settingsRes.json())
-    } catch {
-      showToast('Erro ao carregar dados')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetch('/api/stores')
+      .then((r) => r.json())
+      .then(setStores)
+      .catch(() => showToast('Erro ao carregar lojas'))
+      .finally(() => setLoading(false))
+  }, [])
 
   const showToast = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
   }
 
-  const handleRemove = async (id: string) => {
-    setConfirmId(null)
-    try {
-      const res = await fetch(`/api/videos/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error()
-      setVideos((v) => v.filter((x) => x.id !== id))
-      showToast('Vídeo removido!')
-    } catch {
-      showToast('Erro ao remover vídeo')
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newStore.name || !newStore.slug) {
+      showToast('Nome e slug são obrigatórios')
+      return
     }
-  }
-
-  const persistReorder = useCallback(async (reordered: VideoItem[]) => {
-    setSaving(true)
+    setCreating(true)
     try {
-      await fetch('/api/videos/reorder', {
-        method: 'PUT',
+      const res = await fetch('/api/stores', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reordered),
+        body: JSON.stringify(newStore),
       })
-      showToast('Ordem atualizada!')
-    } catch {
-      showToast('Erro ao salvar ordem')
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? 'Erro ao criar loja')
+      }
+      const store: Store = await res.json()
+      setStores((prev) => [...prev, store])
+      setNewStore({ name: '', slug: '', storeUrl: '' })
+      setShowForm(false)
+      showToast('Loja criada!')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao criar loja')
     } finally {
-      setSaving(false)
+      setCreating(false)
     }
-  }, [])
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    setVideos((prev) => {
-      const oldIdx = prev.findIndex((v) => v.id === active.id)
-      const newIdx = prev.findIndex((v) => v.id === over.id)
-      const reordered = arrayMove(prev, oldIdx, newIdx)
-      persistReorder(reordered)
-      return reordered
-    })
   }
+
+  const inputClass =
+    'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500'
 
   if (loading) {
     return (
@@ -188,78 +67,135 @@ export default function AdminPage() {
 
   return (
     <>
-      {/* Toast */}
       {toast && (
         <div className="fixed top-20 right-6 z-50 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm shadow-lg">
           {toast}
         </div>
       )}
 
-      {/* Confirmação de remoção */}
-      <ConfirmDialog
-        isOpen={!!confirmId}
-        message="Tem certeza que deseja remover este vídeo? Esta ação não pode ser desfeita."
-        onConfirm={() => confirmId && handleRemove(confirmId)}
-        onCancel={() => setConfirmId(null)}
-      />
-
-      {/* Header da seção */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vídeos</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Lojas</h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            {videos.length} {videos.length === 1 ? 'vídeo cadastrado' : 'vídeos cadastrados'}
-            {saving && <span className="ml-2 text-blue-500">Salvando...</span>}
+            {stores.length}{' '}
+            {stores.length === 1 ? 'loja cadastrada' : 'lojas cadastradas'}
           </p>
         </div>
-        <Link
-          href="/admin/videos/new"
+        <button
+          onClick={() => setShowForm(true)}
           className="bg-gray-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
         >
-          + Adicionar vídeo
-        </Link>
+          + Nova loja
+        </button>
       </div>
 
-      {/* Lista vazia */}
-      {videos.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-xl border border-gray-200">
-          <div className="text-5xl mb-4">🎬</div>
-          <p className="text-gray-900 font-semibold mb-2">Nenhum vídeo cadastrado</p>
-          <p className="text-gray-500 text-sm mb-6">Adicione o primeiro vídeo para começar</p>
-          <Link
-            href="/admin/videos/new"
-            className="bg-gray-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            + Adicionar vídeo
-          </Link>
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={videos.map((v) => v.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-3">
-              {videos.map((video, i) => (
-                <SortableVideoCard
-                  key={video.id}
-                  video={video}
-                  index={i}
-                  onRemove={(id) => setConfirmId(id)}
-                />
-              ))}
+      {showForm && (
+        <div className="mb-6 bg-white border border-gray-200 rounded-xl p-5">
+          <h2 className="font-semibold text-gray-900 mb-4">Nova loja</h2>
+          <form onSubmit={handleCreate} className="space-y-3">
+            <input
+              type="text"
+              placeholder="Nome da loja *"
+              value={newStore.name}
+              onChange={(e) =>
+                setNewStore((s) => ({ ...s, name: e.target.value }))
+              }
+              className={inputClass}
+            />
+            <input
+              type="text"
+              placeholder="Slug URL-friendly (ex: julia-gontijo) *"
+              value={newStore.slug}
+              onChange={(e) =>
+                setNewStore((s) => ({
+                  ...s,
+                  slug: e.target.value.toLowerCase().replace(/\s+/g, '-'),
+                }))
+              }
+              className={inputClass}
+            />
+            <input
+              type="url"
+              placeholder="URL da loja (opcional)"
+              value={newStore.storeUrl}
+              onChange={(e) =>
+                setNewStore((s) => ({ ...s, storeUrl: e.target.value }))
+              }
+              className={inputClass}
+            />
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={creating}
+                className="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+              >
+                {creating ? 'Criando...' : 'Criar loja'}
+              </button>
             </div>
-          </SortableContext>
-        </DndContext>
+          </form>
+        </div>
       )}
 
-      {/* Preview ao vivo */}
-      {settings && videos.length > 0 && (
-        <WidgetPreview config={{ videos, settings }} onRefresh={fetchData} />
+      {stores.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-xl border border-gray-200">
+          <div className="text-5xl mb-4">🏪</div>
+          <p className="text-gray-900 font-semibold mb-2">Nenhuma loja cadastrada</p>
+          <p className="text-gray-500 text-sm mb-6">
+            Crie a primeira loja para começar
+          </p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-gray-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            + Nova loja
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {stores.map((store) => (
+            <Link
+              key={store.id}
+              href={`/admin/stores/${store.slug}`}
+              className="block bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-900 group-hover:text-black">
+                    {store.name}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-2">
+                    <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">
+                      {store.slug}
+                    </code>
+                    {store.storeUrl && (
+                      <span className="truncate">{store.storeUrl}</span>
+                    )}
+                  </p>
+                </div>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-gray-400 flex-shrink-0"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
     </>
   )

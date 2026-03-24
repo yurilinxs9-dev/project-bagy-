@@ -1,16 +1,95 @@
 import { supabaseAdmin } from './supabase'
-import { VideoItem, WidgetSettings } from '@/types'
+import { VideoItem, WidgetSettings, Store } from '@/types'
 import videosJson from '@/data/videos.json'
 
-// ── Vídeos ────────────────────────────────────────────────────────────────────
+// ── Helper: resolve store id from slug ────────────────────────────────────────
 
-export async function getVideos(): Promise<VideoItem[]> {
+async function getStoreId(slug: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('stores')
+    .select('id')
+    .eq('slug', slug)
+    .single()
+  return (data as Record<string, string> | null)?.id ?? null
+}
+
+// ── Stores ─────────────────────────────────────────────────────────────────────
+
+export async function getStores(): Promise<Store[]> {
+  const { data, error } = await supabaseAdmin
+    .from('stores')
+    .select('*')
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    name: row.name as string,
+    slug: row.slug as string,
+    storeUrl: row.store_url as string,
+    createdAt: row.created_at as string,
+  }))
+}
+
+export async function addStore(
+  store: Omit<Store, 'id' | 'createdAt'>
+): Promise<Store> {
+  const { data, error } = await supabaseAdmin
+    .from('stores')
+    .insert({
+      name: store.name,
+      slug: store.slug,
+      store_url: store.storeUrl,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  const row = data as Record<string, unknown>
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    slug: row.slug as string,
+    storeUrl: row.store_url as string,
+    createdAt: row.created_at as string,
+  }
+}
+
+export async function getStoreBySlug(slug: string): Promise<Store | null> {
+  const { data } = await supabaseAdmin
+    .from('stores')
+    .select('*')
+    .eq('slug', slug)
+    .single()
+
+  if (!data) return null
+  const row = data as Record<string, unknown>
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    slug: row.slug as string,
+    storeUrl: row.store_url as string,
+    createdAt: row.created_at as string,
+  }
+}
+
+// ── Vídeos ─────────────────────────────────────────────────────────────────────
+
+export async function getVideos(storeSlug?: string): Promise<VideoItem[]> {
   try {
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('videos')
       .select('*')
       .order('sort_order', { ascending: true })
 
+    if (storeSlug) {
+      const storeId = await getStoreId(storeSlug)
+      if (!storeId) return []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      query = (query as any).eq('store_id', storeId)
+    }
+
+    const { data, error } = await query
     if (error) throw error
 
     return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -30,30 +109,15 @@ export async function getVideos(): Promise<VideoItem[]> {
   }
 }
 
-export async function setVideos(videos: VideoItem[]): Promise<void> {
-  // Delete all then insert — abordagem simples para manter ordem
-  await supabaseAdmin.from('videos').delete().neq('id', '')
+export async function addVideo(
+  video: VideoItem,
+  storeSlug?: string
+): Promise<void> {
+  let storeId: string | null = null
+  if (storeSlug) {
+    storeId = await getStoreId(storeSlug)
+  }
 
-  if (videos.length === 0) return
-
-  const rows = videos.map((v, i) => ({
-    id: v.id,
-    video_url: v.videoUrl,
-    poster_url: v.posterUrl,
-    product_name: v.product.name,
-    product_price: v.product.price,
-    product_image: v.product.image,
-    product_url: v.product.url,
-    whatsapp: v.whatsapp ?? null,
-    sort_order: i,
-    updated_at: new Date().toISOString(),
-  }))
-
-  const { error } = await supabaseAdmin.from('videos').insert(rows)
-  if (error) throw error
-}
-
-export async function addVideo(video: VideoItem): Promise<void> {
   const { data: existing } = await supabaseAdmin
     .from('videos')
     .select('sort_order')
@@ -73,12 +137,18 @@ export async function addVideo(video: VideoItem): Promise<void> {
     product_url: video.product.url,
     whatsapp: video.whatsapp ?? null,
     sort_order: nextOrder,
+    store_id: storeId,
   })
   if (error) throw error
 }
 
-export async function updateVideo(id: string, updates: Partial<VideoItem>): Promise<void> {
-  const row: Record<string, unknown> = { updated_at: new Date().toISOString() }
+export async function updateVideo(
+  id: string,
+  updates: Partial<VideoItem>
+): Promise<void> {
+  const row: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  }
   if (updates.videoUrl) row.video_url = updates.videoUrl
   if (updates.posterUrl) row.poster_url = updates.posterUrl
   if (updates.product) {
@@ -98,19 +168,43 @@ export async function deleteVideo(id: string): Promise<void> {
   if (error) throw error
 }
 
-// ── Settings ──────────────────────────────────────────────────────────────────
+export async function reorderVideos(videoIds: string[]): Promise<void> {
+  for (let i = 0; i < videoIds.length; i++) {
+    await supabaseAdmin
+      .from('videos')
+      .update({ sort_order: i })
+      .eq('id', videoIds[i])
+  }
+}
 
-export async function getSettings(): Promise<WidgetSettings> {
+// ── Settings ───────────────────────────────────────────────────────────────────
+
+export async function getSettings(storeSlug?: string): Promise<WidgetSettings> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('settings')
-      .select('*')
-      .eq('id', 1)
-      .single()
+    let row: Record<string, unknown> | null = null
 
-    if (error || !data) throw error ?? new Error('not found')
+    if (storeSlug) {
+      const storeId = await getStoreId(storeSlug)
+      if (!storeId) throw new Error('Store not found')
+      const { data, error } = await supabaseAdmin
+        .from('settings')
+        .select('*')
+        .eq('store_id', storeId)
+        .single()
+      if (error) throw error
+      row = data as Record<string, unknown>
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from('settings')
+        .select('*')
+        .eq('id', 1)
+        .single()
+      if (error) throw error
+      row = data as Record<string, unknown>
+    }
 
-    const row = data as Record<string, unknown>
+    if (!row) throw new Error('not found')
+
     return {
       whatsappDefault: row.whatsapp_default as string,
       accentColor: row.accent_color as string,
@@ -129,20 +223,47 @@ export async function getSettings(): Promise<WidgetSettings> {
   }
 }
 
-export async function setSettings(settings: WidgetSettings): Promise<void> {
-  const { error } = await supabaseAdmin.from('settings').upsert({
-    id: 1,
-    whatsapp_default: settings.whatsappDefault,
-    accent_color: settings.accentColor,
-    autoplay: settings.autoplay,
-    autoplay_delay: settings.autoplayDelay,
-    show_arrows: settings.showArrows,
-    show_dots: settings.showDots,
-    show_whatsapp: settings.showWhatsapp,
-    show_share: settings.showShare,
-    show_like: settings.showLike,
-    add_to_cart_mode: settings.addToCartMode,
-    store_url: settings.storeUrl,
-  })
-  if (error) throw error
+export async function setSettings(
+  settings: WidgetSettings,
+  storeSlug?: string
+): Promise<void> {
+  if (storeSlug) {
+    const storeId = await getStoreId(storeSlug)
+    if (!storeId) throw new Error('Store not found')
+
+    const { error } = await supabaseAdmin.from('settings').upsert(
+      {
+        store_id: storeId,
+        whatsapp_default: settings.whatsappDefault,
+        accent_color: settings.accentColor,
+        autoplay: settings.autoplay,
+        autoplay_delay: settings.autoplayDelay,
+        show_arrows: settings.showArrows,
+        show_dots: settings.showDots,
+        show_whatsapp: settings.showWhatsapp,
+        show_share: settings.showShare,
+        show_like: settings.showLike,
+        add_to_cart_mode: settings.addToCartMode,
+        store_url: settings.storeUrl,
+      },
+      { onConflict: 'store_id' }
+    )
+    if (error) throw error
+  } else {
+    const { error } = await supabaseAdmin.from('settings').upsert({
+      id: 1,
+      whatsapp_default: settings.whatsappDefault,
+      accent_color: settings.accentColor,
+      autoplay: settings.autoplay,
+      autoplay_delay: settings.autoplayDelay,
+      show_arrows: settings.showArrows,
+      show_dots: settings.showDots,
+      show_whatsapp: settings.showWhatsapp,
+      show_share: settings.showShare,
+      show_like: settings.showLike,
+      add_to_cart_mode: settings.addToCartMode,
+      store_url: settings.storeUrl,
+    })
+    if (error) throw error
+  }
 }

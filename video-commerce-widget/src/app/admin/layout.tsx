@@ -11,24 +11,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="text-xl">🎬</span>
             <span className="text-lg font-bold text-gray-900">Video Commerce Admin</span>
           </Link>
-
-          <nav className="flex items-center gap-6">
-            <Link href="/admin" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              Vídeos
-            </Link>
-            <Link href="/admin/settings" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              Configurações
-            </Link>
-            <a
-              href="/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-            >
-              Ver widget ↗
-            </a>
+          <div className="flex items-center gap-4">
             <LogoutButton />
-          </nav>
+          </div>
         </div>
       </header>
 
