@@ -9,7 +9,7 @@ interface ProductCardProps {
   onClick?: () => void
 }
 
-export function ProductCard({ product, onClick }: ProductCardProps) {
+export const ProductCard = React.memo(function ProductCard({ product, onClick }: ProductCardProps) {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (onClick) {
@@ -22,37 +22,63 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
   return (
     <div
       onClick={handleClick}
-      className="flex items-center gap-2 cursor-pointer"
       style={{
-        padding: '6px 8px',
-        background: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 12px',
+        background: '#ffffff',
+        borderTop: '1px solid rgba(0,0,0,0.07)',
+        cursor: 'pointer',
+        transition: 'background 150ms ease',
       }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = '#f8f8f8')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
     >
-      <img
-        src={product.image}
-        alt={product.name}
-        loading="lazy"
-        className="rounded object-cover flex-shrink-0"
-        style={{ width: 40, height: 40, borderRadius: 6 }}
-        onError={(e) => {
-          e.currentTarget.style.display = 'none'
-        }}
-      />
-      <div className="flex-1 min-w-0">
+      {product.image && (
+        <img
+          src={product.image}
+          alt={product.name}
+          loading="lazy"
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 8,
+            objectFit: 'cover',
+            flexShrink: 0,
+            border: '1px solid rgba(0,0,0,0.06)',
+          }}
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
+        />
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <p
-          className="text-white truncate leading-tight"
-          style={{ fontSize: '11.5px', marginBottom: 1 }}
+          style={{
+            fontSize: 11.5,
+            fontWeight: 600,
+            color: '#111',
+            margin: 0,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            lineHeight: 1.3,
+            marginBottom: 3,
+          }}
         >
           {product.name}
         </p>
         <p
-          className="text-white font-bold leading-tight"
-          style={{ fontSize: '12.5px' }}
+          style={{
+            fontSize: 13.5,
+            fontWeight: 700,
+            color: '#111',
+            margin: 0,
+            lineHeight: 1.2,
+          }}
         >
           {product.price}
         </p>
       </div>
     </div>
   )
-}
+})

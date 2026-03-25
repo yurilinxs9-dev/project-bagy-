@@ -78,8 +78,6 @@ export function VideoSlide({
     if (!previewMode) onVideoClick(index)
   }
 
-  // Se não houver poster, usa o vídeo com fragmento #t=0.001 para exibir o 1º frame parado
-  const fallbackPoster = video.posterUrl ? undefined : `${video.videoUrl}#t=0.001`
   const posterUrl = optimizePosterUrl(video.posterUrl)
 
   return (
@@ -88,12 +86,12 @@ export function VideoSlide({
       style={{ cursor: previewMode ? 'default' : 'pointer' }}
       onClick={handleSlideClick}
     >
-      <div style={{ borderRadius: 14, overflow: 'hidden', background: '#111' }}>
+      <div style={{ borderRadius: 14, overflow: 'hidden', background: '#1a1a1a' }}>
 
         {/* Área do vídeo — aspect ratio 9:16 */}
         <div style={{ position: 'relative', paddingTop: '177.78%' }}>
 
-          {/* Poster overlay — visível enquanto pausado ou sem vídeo */}
+          {/* Poster overlay */}
           {video.posterUrl ? (
             <img
               src={posterUrl}
@@ -114,25 +112,25 @@ export function VideoSlide({
               onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
           ) : (
-            /* Sem poster — exibe 1º frame do vídeo pausado como capa */
-            <video
-              src={fallbackPoster}
-              muted
-              playsInline
-              preload="metadata"
+            /* Sem poster — placeholder neutro (não mostra preto) */
+            <div
               style={{
                 position: 'absolute',
                 inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                objectPosition: 'center top',
+                background: 'linear-gradient(160deg, #2a2a2a 0%, #1a1a1a 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1,
                 opacity: posterVisible || !showVideo ? 1 : 0,
                 transition: 'opacity 300ms ease',
-                zIndex: 1,
                 pointerEvents: 'none',
               }}
-            />
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+            </div>
           )}
 
           {/* Shimmer — quando não há poster e vídeo está carregando */}
@@ -147,7 +145,7 @@ export function VideoSlide({
           {showVideo && (
             <video
               src={video.videoUrl}
-              poster={posterUrl || fallbackPoster}
+              poster={posterUrl || undefined}
               muted
               playsInline
               preload={videoPreload}
