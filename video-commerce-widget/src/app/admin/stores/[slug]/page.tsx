@@ -114,8 +114,8 @@ export default function StoreVideosPage() {
   const fetchData = useCallback(async () => {
     try {
       const [videosRes, settingsRes] = await Promise.all([
-        fetch(`/api/videos?store=${slug}`),
-        fetch(`/api/settings?store=${slug}`),
+        fetch(`/api/videos?store=${slug}`, { cache: 'no-store' }),
+        fetch(`/api/settings?store=${slug}`, { cache: 'no-store' }),
       ])
       setVideos(await videosRes.json())
       setSettings(await settingsRes.json())
@@ -128,6 +128,13 @@ export default function StoreVideosPage() {
 
   useEffect(() => {
     fetchData()
+  }, [fetchData])
+
+  // Re-busca quando volta para esta aba/página (ex: após adicionar vídeo)
+  useEffect(() => {
+    const onFocus = () => fetchData()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
   }, [fetchData])
 
   const handleRemove = async (id: string) => {

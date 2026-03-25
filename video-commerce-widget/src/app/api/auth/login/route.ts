@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Requisição inválida' }, { status: 400 })
   }
 
-  if (body.password !== adminPassword) {
+  if (body.password?.trim() !== adminPassword.trim()) {
     return Response.json({ error: 'Senha incorreta' }, { status: 401 })
   }
 

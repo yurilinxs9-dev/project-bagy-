@@ -92,7 +92,7 @@ export function VideoForm({ initialData, onSubmit, isLoading }: VideoFormProps) 
     }
   }
 
-  // ── Upload de vídeo para Cloudinary ──────────────────────────────────────────
+  // ── Upload de vídeo direto para Cloudinary (sem passar pelo servidor) ────────
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -102,15 +102,30 @@ export function VideoForm({ initialData, onSubmit, isLoading }: VideoFormProps) 
     setUploadProgress(`Enviando ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)...`)
 
     try {
+      // Obter assinatura do servidor (request pequeno)
+      const signRes = await fetch('/api/cloudinary/sign', { method: 'POST' })
+      if (!signRes.ok) throw new Error('Erro ao obter assinatura de upload')
+      const signData = await signRes.json()
+
+      // Upload direto ao Cloudinary — bypassa limite de body do servidor
       const fd = new FormData()
       fd.append('file', file)
+      fd.append('api_key', signData.api_key)
+      fd.append('timestamp', String(signData.timestamp))
+      fd.append('signature', signData.signature)
+      fd.append('folder', signData.folder)
+      fd.append('use_filename', signData.use_filename)
+      fd.append('unique_filename', signData.unique_filename)
 
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      const data = await res.json()
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${signData.cloud_name}/video/upload`,
+        { method: 'POST', body: fd }
+      )
+      const data = await uploadRes.json()
 
-      if (!res.ok) throw new Error(data.error || 'Erro no upload')
-      set('videoUrl', data.url)
-      setUploadProgress(`✅ Upload concluído!`)
+      if (!uploadRes.ok) throw new Error(data.error?.message || 'Erro no upload')
+      set('videoUrl', data.secure_url)
+      setUploadProgress('✅ Upload concluído!')
       setTimeout(() => setUploadProgress(''), 3000)
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Erro no upload')

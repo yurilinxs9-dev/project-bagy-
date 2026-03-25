@@ -132,12 +132,18 @@ export async function addVideo(
     storeId = await getStoreId(storeSlug)
   }
 
-  const { data: existing } = await supabaseAdmin
+  // Scopa o sort_order para a loja correta (ou para vídeos sem loja)
+  // Usa maybeSingle() para não lançar erro em tabela vazia
+  let orderQuery = supabaseAdmin
     .from('videos')
     .select('sort_order')
     .order('sort_order', { ascending: false })
     .limit(1)
-    .single()
+  if (storeId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    orderQuery = (orderQuery as any).eq('store_id', storeId)
+  }
+  const { data: existing } = await (orderQuery as any).maybeSingle()
 
   const nextOrder = existing ? (existing.sort_order as number) + 1 : 0
 

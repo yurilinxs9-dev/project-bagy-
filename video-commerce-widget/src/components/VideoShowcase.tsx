@@ -41,8 +41,8 @@ export function VideoShowcase({ config: configProp, storeSlug }: VideoShowcasePr
     const storeParam = slug ? `?store=${encodeURIComponent(slug)}` : ''
 
     Promise.all([
-      fetch(`${apiUrl}/api/videos${storeParam}`).then((r) => r.json()),
-      fetch(`${apiUrl}/api/settings${storeParam}`).then((r) => r.json()),
+      fetch(`${apiUrl}/api/videos${storeParam}`, { cache: 'no-store' }).then((r) => r.json()),
+      fetch(`${apiUrl}/api/settings${storeParam}`, { cache: 'no-store' }).then((r) => r.json()),
     ])
       .then(([videos, settings]) => {
         setConfig({ videos, settings })
