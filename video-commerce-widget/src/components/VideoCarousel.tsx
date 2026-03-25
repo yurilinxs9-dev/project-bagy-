@@ -36,7 +36,7 @@ function playActiveOnly(swiper: SwiperType) {
 function calcSpv() {
   if (typeof window === 'undefined') return 5
   const slideW =
-    window.innerWidth < 768 ? 170 : window.innerWidth < 1024 ? 210 : 245
+    window.innerWidth < 640 ? 130 : window.innerWidth < 1024 ? 160 : 190
   return window.innerWidth / (slideW + 12)
 }
 

@@ -29,7 +29,7 @@ export function WidgetPreview({ config, onRefresh }: WidgetPreviewProps) {
 
       <div
         className="bg-white rounded-xl border border-gray-200 overflow-hidden"
-        style={{ pointerEvents: 'none', userSelect: 'none' }}
+        style={{ pointerEvents: 'none', userSelect: 'none', maxHeight: 400 }}
       >
         <VideoCarousel
           videos={config.videos}
