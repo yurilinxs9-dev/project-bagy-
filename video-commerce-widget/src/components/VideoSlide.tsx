@@ -52,22 +52,18 @@ export function VideoSlide({
     }
   }, [showVideo])
 
-  const handleVideoPlay = () => {
-    setPosterVisible(false)
+  // Poster some apenas quando o primeiro frame está disponível (canplay),
+  // não no play() que dispara antes dos dados chegarem — evita tela preta.
+  const handleVideoCanPlay = () => {
     setIsLoading(false)
+    setPosterVisible(false)
   }
 
   const handleVideoPause = () => {
     setPosterVisible(true)
-    setIsLoading(true)
   }
 
   const handleVideoWaiting = () => setIsLoading(true)
-
-  const handleVideoCanPlay = () => {
-    if (!isLoading) return
-    setIsLoading(false)
-  }
 
   const handleVideoError = () => {
     setPosterVisible(true)
@@ -150,7 +146,6 @@ export function VideoSlide({
               playsInline
               preload={videoPreload}
               loop
-              onPlay={handleVideoPlay}
               onPause={handleVideoPause}
               onWaiting={handleVideoWaiting}
               onCanPlay={handleVideoCanPlay}
