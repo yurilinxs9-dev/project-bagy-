@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useRef, useCallback, useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import type { Swiper as SwiperType } from 'swiper'
 import 'swiper/css'
@@ -18,7 +19,6 @@ interface VideoCarouselProps {
   previewMode?: boolean
 }
 
-/** Pausa todos os vídeos no container */
 function pauseAllIn(el: HTMLElement | undefined | null) {
   if (!el) return
   el.querySelectorAll<HTMLVideoElement>('video').forEach((v) => {
@@ -26,11 +26,14 @@ function pauseAllIn(el: HTMLElement | undefined | null) {
   })
 }
 
-/** Pausa todos e toca APENAS o slide fisicamente ativo */
 function playActiveOnly(swiper: SwiperType) {
   pauseAllIn(swiper.el)
   const activeEl = swiper.slides?.[swiper.activeIndex]
-  activeEl?.querySelector<HTMLVideoElement>('video')?.play().catch(() => {})
+  const vid = activeEl?.querySelector<HTMLVideoElement>('video')
+  if (vid) {
+    vid.currentTime = 0   // sempre reinicia do começo ao ativar slide
+    vid.play().catch(() => {})
+  }
 }
 
 function calcSpv() {
@@ -52,7 +55,6 @@ export function VideoCarousel({
   const swiperRef = useRef<SwiperType | null>(null)
 
   const [spv, setSpv] = useState(5)
-  // Índice físico do slide ativo no array triplicado (0..3N-1)
   const [physicalActiveIdx, setPhysicalActiveIdx] = useState(videos.length)
 
   const N = videos.length
@@ -105,20 +107,19 @@ export function VideoCarousel({
     [onSlideChange, previewMode, N]
   )
 
-  // Após a transição: toca vídeo ativo e re-centraliza silenciosamente quando
-  // o usuário entrou na 1ª ou 3ª cópia (para loop infinito sem Swiper loop mode)
+  // Re-centraliza no array triplicado quando chega nas bordas (loop infinito).
+  // flushSync: força React a renderizar showVideo ANTES do slideTo mover o DOM,
+  // garantindo que o slide de destino já tenha o <video> montado — sem flash preto.
   const handleTransitionEnd = useCallback(
     (swiper: SwiperType) => {
-      if (!previewMode) playActiveOnly(swiper)
       const idx = swiper.activeIndex
-      if (idx < N) {
-        const newIdx = idx + N
+      if (idx < N || idx >= 2 * N) {
+        const newIdx = idx < N ? idx + N : idx - N
+        flushSync(() => setPhysicalActiveIdx(newIdx))
         swiper.slideTo(newIdx, 0, false)
-        setPhysicalActiveIdx(newIdx)
-      } else if (idx >= 2 * N) {
-        const newIdx = idx - N
-        swiper.slideTo(newIdx, 0, false)
-        setPhysicalActiveIdx(newIdx)
+        if (!previewMode) setTimeout(() => playActiveOnly(swiper), 80)
+      } else {
+        if (!previewMode) playActiveOnly(swiper)
       }
     },
     [previewMode, N]
@@ -129,7 +130,6 @@ export function VideoCarousel({
   }, [])
 
   return (
-    // Usa width:100% em vez de 100vw para evitar overflow da scrollbar
     <div
       ref={containerRef}
       className="vcw-carousel"
@@ -141,8 +141,6 @@ export function VideoCarousel({
         paddingBottom: 8,
       }}
     >
-      {/* SEM loop={true} — Swiper loop insere clones que deslocam activeIndex,
-          corrompendo physicalActiveIdx. Re-centralização manual no transitionEnd. */}
       <Swiper
         slidesPerView={spv}
         centeredSlides
@@ -167,12 +165,10 @@ export function VideoCarousel({
       >
         {tripled.map((video, i) => {
           const logicalIdx = i % N
-          // Distância circular no array triplicado até o slide ativo
           const dist = Math.min(
             Math.abs(i - physicalActiveIdx),
             TOTAL - Math.abs(i - physicalActiveIdx)
           )
-          // Apenas active±1 têm elemento <video> no DOM (economia de memória)
           const showVideo = dist <= 1
 
           return (
