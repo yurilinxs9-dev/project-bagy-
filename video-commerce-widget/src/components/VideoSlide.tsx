@@ -78,6 +78,8 @@ export function VideoSlide({
     if (!previewMode) onVideoClick(index)
   }
 
+  // Se não houver poster, usa o vídeo com fragmento #t=0.001 para exibir o 1º frame parado
+  const fallbackPoster = video.posterUrl ? undefined : `${video.videoUrl}#t=0.001`
   const posterUrl = optimizePosterUrl(video.posterUrl)
 
   return (
@@ -92,26 +94,46 @@ export function VideoSlide({
         <div style={{ position: 'relative', paddingTop: '177.78%' }}>
 
           {/* Poster overlay — visível enquanto pausado ou sem vídeo */}
-          <img
-            src={posterUrl}
-            alt={video.product.name}
-            loading="lazy"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'center top',
-              transition: 'opacity 300ms ease',
-              opacity: posterVisible || !showVideo ? 1 : 0,
-              zIndex: 1,
-              pointerEvents: 'none',
-            }}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
-          />
+          {video.posterUrl ? (
+            <img
+              src={posterUrl}
+              alt={video.product.name}
+              loading="lazy"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center top',
+                transition: 'opacity 300ms ease',
+                opacity: posterVisible || !showVideo ? 1 : 0,
+                zIndex: 1,
+                pointerEvents: 'none',
+              }}
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          ) : (
+            /* Sem poster — exibe 1º frame do vídeo pausado como capa */
+            <video
+              src={fallbackPoster}
+              muted
+              playsInline
+              preload="metadata"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center top',
+                opacity: posterVisible || !showVideo ? 1 : 0,
+                transition: 'opacity 300ms ease',
+                zIndex: 1,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
 
           {/* Shimmer — quando não há poster e vídeo está carregando */}
           {!video.posterUrl && isLoading && showVideo && (
@@ -125,7 +147,7 @@ export function VideoSlide({
           {showVideo && (
             <video
               src={video.videoUrl}
-              poster={posterUrl}
+              poster={posterUrl || fallbackPoster}
               muted
               playsInline
               preload={videoPreload}

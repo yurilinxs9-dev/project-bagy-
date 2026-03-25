@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { v2 as cloudinary } from 'cloudinary'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
   const apiSecret = process.env.CLOUDINARY_API_SECRET
@@ -15,9 +15,13 @@ export async function POST() {
 
   cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret })
 
+  // ?resource=image para posters, padrão é vídeo
+  const resource = request.nextUrl.searchParams.get('resource') ?? 'video'
+  const folder = resource === 'image' ? 'video-commerce/posters' : 'video-commerce'
+
   const timestamp = Math.round(Date.now() / 1000)
   const params = {
-    folder: 'video-commerce',
+    folder,
     timestamp,
     use_filename: 'true',
     unique_filename: 'true',

@@ -61,11 +61,13 @@ export function VideoCarousel({
   const TOTAL = N * 3
 
   useEffect(() => {
-    const calc = () => setSpv(Math.min(calcSpv(), N - 0.5))
+    // Cap fixo em 8 — NÃO varia com N para manter tamanho constante dos slides
+    // (slides triplicados garantem loop mesmo com spv alto)
+    const calc = () => setSpv(Math.min(calcSpv(), 8))
     calc()
     window.addEventListener('resize', calc)
     return () => window.removeEventListener('resize', calc)
-  }, [N])
+  }, [])
 
   useEffect(() => {
     const swiper = swiperRef.current
