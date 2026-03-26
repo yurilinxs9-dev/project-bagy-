@@ -34,7 +34,7 @@ function generatePosterFromVideoUrl(videoUrl: string): string {
   return `${m[1]}so_0.5,f_jpg,q_auto,w_400/${m[2]}.jpg`
 }
 
-export function VideoSlide({
+export const VideoSlide = React.memo(function VideoSlide({
   video,
   settings,
   isActive,
@@ -240,4 +240,4 @@ export function VideoSlide({
       </div>
     </div>
   )
-}
+})

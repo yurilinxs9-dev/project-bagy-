@@ -115,31 +115,33 @@ export function VideoCarousel({
 
   const tripled: VideoItem[] = [...videos, ...videos, ...videos]
 
+  // Durante a animação: APENAS atualiza physicalActiveIdx (para showVideo/preload)
+  // e pausa vídeos. onSlideChange é diferido para handleTransitionEnd.
+  // Isso evita que isActive mude durante a animação, impedindo useEffect play/pause
+  // de rodar no meio da transição — causa principal do jank no mobile.
   const handleSlideChange = useCallback(
     (swiper: SwiperType) => {
-      const idx = swiper.activeIndex
-      setPhysicalActiveIdx(idx)
-      onSlideChange(idx % N)
-      // Pausa todos imediatamente; cada VideoSlide retoma via useEffect interno
+      setPhysicalActiveIdx(swiper.activeIndex)
       pauseAllIn(swiper.el)
     },
-    [onSlideChange, N]
+    []
   )
 
-  // Re-centralização sem flushSync — flushSync bloqueia o main thread durante
-  // a animação Swiper causando frames dropados no mobile.
-  // VideoSlide's useEffect cuida de iniciar o vídeo após re-render do React.
+  // Após a animação: atualiza activeIndex (prop isActive nos VideoSlides),
+  // aciona play via VideoSlide useEffect, e re-centraliza se necessário.
   const handleTransitionEnd = useCallback(
     (swiper: SwiperType) => {
       const idx = swiper.activeIndex
       if (idx < N || idx >= 2 * N) {
         const newIdx = idx < N ? idx + N : idx - N
-        // Sem flushSync — React re-renderiza async, VideoSlide's useEffect executa play
         setPhysicalActiveIdx(newIdx)
         swiper.slideTo(newIdx, 0, false)
+        onSlideChange(newIdx % N)
+      } else {
+        onSlideChange(idx % N)
       }
     },
-    [N]
+    [N, onSlideChange]
   )
 
   const handleVideoEnded = useCallback(() => {
@@ -162,7 +164,7 @@ export function VideoCarousel({
         slidesPerView={spv}
         centeredSlides
         initialSlide={N}
-        speed={500}
+        speed={300}
         spaceBetween={12}
         grabCursor={!previewMode}
         touchRatio={previewMode ? 0 : 1}
