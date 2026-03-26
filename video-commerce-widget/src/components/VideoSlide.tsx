@@ -16,9 +16,6 @@ interface VideoSlideProps {
   videoPreload?: 'none' | 'metadata'
 }
 
-/**
- * Otimiza poster manual do Cloudinary: adiciona f_auto,q_auto,w_400
- */
 function optimizePosterUrl(url: string): string {
   if (!url) return ''
   const m = url.match(
@@ -28,11 +25,6 @@ function optimizePosterUrl(url: string): string {
   return `${m[1]}f_auto,q_auto,w_400/${m[2]}`
 }
 
-/**
- * Gera thumbnail do próprio vídeo Cloudinary no instante 0.5s.
- * Funciona para qualquer vídeo MP4/WebM em res.cloudinary.com.
- * Ex: .../video/upload/v1/foo.mp4 → .../video/upload/so_0.5,f_jpg,q_auto,w_400/v1/foo.jpg
- */
 function generatePosterFromVideoUrl(videoUrl: string): string {
   if (!videoUrl) return ''
   const m = videoUrl.match(
@@ -53,12 +45,16 @@ export function VideoSlide({
   previewMode = false,
   videoPreload = 'none',
 }: VideoSlideProps) {
+  const videoRef = useRef<HTMLVideoElement>(null)
   const [posterVisible, setPosterVisible] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
-  // Rastreia se canplay já disparou neste ciclo de vida — permite que onPlay
-  // esconda o poster em retomadas sem esconder antes do primeiro frame estar pronto.
+  // canplay já disparou neste ciclo: permite que onPlay esconda poster em retomadas
   const isReadyRef = useRef(false)
+  // ref para usar o valor atualizado de isActive dentro de handlers de evento
+  const isActiveRef = useRef(isActive)
+  isActiveRef.current = isActive
 
+  // Reset ao montar/desmontar o vídeo
   useEffect(() => {
     if (showVideo) {
       setPosterVisible(true)
@@ -67,15 +63,34 @@ export function VideoSlide({
     }
   }, [showVideo])
 
-  // Primeiro frame disponível: marca pronto e esconde poster
+  // Auto-play/pause via React effect — cobre o caso de re-centralização do loop
+  // onde o carousel não tem mais flushSync e o play precisa acontecer após o render
+  useEffect(() => {
+    const vid = videoRef.current
+    if (!vid || previewMode) return
+    if (isActive && showVideo) {
+      vid.currentTime = 0
+      vid.play().catch(() => {
+        // Falhou (vídeo ainda carregando) — handleVideoCanPlay irá retomar
+      })
+    } else if (showVideo && !vid.paused) {
+      // Slide adjacente carregado mas não ativo — garante que está pausado
+      vid.pause()
+    }
+  }, [isActive, showVideo, previewMode])
+
+  // canplay: primeiro frame disponível
   const handleVideoCanPlay = () => {
     isReadyRef.current = true
     setIsLoading(false)
     setPosterVisible(false)
+    // Retenta play caso o useEffect rodou antes do vídeo estar pronto
+    if (isActiveRef.current && !previewMode) {
+      videoRef.current?.play().catch(() => {})
+    }
   }
 
-  // Retomada após pausa: esconde poster se vídeo já estiver pronto
-  // (canplay não re-dispara em retomadas — por isso precisamos do onPlay)
+  // onPlay em retomadas (canplay não re-dispara): esconde poster se já pronto
   const handleVideoPlay = () => {
     if (isReadyRef.current) setPosterVisible(false)
   }
@@ -96,7 +111,6 @@ export function VideoSlide({
     if (!previewMode) onVideoClick(index)
   }
 
-  // Poster efetivo: manual (otimizado) ou thumbnail gerado do vídeo Cloudinary
   const manualPoster = optimizePosterUrl(video.posterUrl)
   const generatedPoster = !video.posterUrl
     ? generatePosterFromVideoUrl(video.videoUrl)
@@ -115,7 +129,7 @@ export function VideoSlide({
 
         <div style={{ position: 'relative', paddingTop: '177.78%' }}>
 
-          {/* Camada 1 — gradiente de fundo (fallback sempre visível) */}
+          {/* Camada 1 — gradiente de fundo (fallback sempre presente) */}
           <div
             style={{
               position: 'absolute',
@@ -135,7 +149,7 @@ export function VideoSlide({
             </svg>
           </div>
 
-          {/* Camada 2 — poster (manual ou thumbnail gerado) sobre o gradiente */}
+          {/* Camada 2 — poster manual ou thumbnail gerado pelo Cloudinary */}
           {effectivePoster && (
             <img
               src={effectivePoster}
@@ -160,6 +174,7 @@ export function VideoSlide({
           {/* Camada 3 — vídeo (renderizado apenas nos slides active±1) */}
           {showVideo && (
             <video
+              ref={videoRef}
               src={video.videoUrl}
               poster={effectivePoster || undefined}
               muted

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useRef, useCallback, useEffect, useState } from 'react'
-import { flushSync } from 'react-dom'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import type { Swiper as SwiperType } from 'swiper'
 import 'swiper/css'
@@ -31,7 +30,7 @@ function playActiveOnly(swiper: SwiperType) {
   const activeEl = swiper.slides?.[swiper.activeIndex]
   const vid = activeEl?.querySelector<HTMLVideoElement>('video')
   if (vid) {
-    vid.currentTime = 0   // sempre reinicia do começo ao ativar slide
+    vid.currentTime = 0
     vid.play().catch(() => {})
   }
 }
@@ -53,6 +52,9 @@ export function VideoCarousel({
 }: VideoCarouselProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const swiperRef = useRef<SwiperType | null>(null)
+  // Previne play/pause rápido quando o usuário rola perto do limiar de intersecção
+  const isInViewRef = useRef(false)
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [spv, setSpv] = useState(5)
   const [physicalActiveIdx, setPhysicalActiveIdx] = useState(videos.length)
@@ -60,11 +62,20 @@ export function VideoCarousel({
   const N = videos.length
   const TOTAL = N * 3
 
+  // Debounce de 200ms no resize — impede que a barra de URL do mobile
+  // (que muda a altura do viewport ao rolar) dispare recálculos constantes
   useEffect(() => {
-    const calc = () => setSpv(Math.min(calcSpv(), 8))
-    calc()
-    window.addEventListener('resize', calc)
-    return () => window.removeEventListener('resize', calc)
+    let debounceTimer: ReturnType<typeof setTimeout>
+    const calc = () => {
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => setSpv(Math.min(calcSpv(), 8)), 200)
+    }
+    setSpv(Math.min(calcSpv(), 8))
+    window.addEventListener('resize', calc, { passive: true })
+    return () => {
+      window.removeEventListener('resize', calc)
+      clearTimeout(debounceTimer)
+    }
   }, [])
 
   useEffect(() => {
@@ -72,24 +83,33 @@ export function VideoCarousel({
     if (!swiper) return
     const timer = setTimeout(() => {
       swiper.update()
-      if (!previewMode) playActiveOnly(swiper)
+      if (!previewMode && isInViewRef.current) playActiveOnly(swiper)
     }, 400)
     return () => clearTimeout(timer)
   }, [spv, previewMode])
 
   const handleEnter = useCallback(() => {
-    if (!previewMode) {
-      setTimeout(() => {
-        const swiper = swiperRef.current
-        if (swiper) playActiveOnly(swiper)
-      }, 150)
+    // Cancela qualquer leave pendente (evita oscilação no limiar)
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current)
+      leaveTimerRef.current = null
     }
+    if (isInViewRef.current || previewMode) return
+    isInViewRef.current = true
+    setTimeout(() => {
+      const swiper = swiperRef.current
+      if (swiper && isInViewRef.current) playActiveOnly(swiper)
+    }, 150)
   }, [previewMode])
 
-  const handleLeave = useCallback(
-    () => pauseAllIn(swiperRef.current?.el),
-    []
-  )
+  // Leave com debounce — impede que o IntersectionObserver oscilando perto
+  // do footer cause pause/play rápido que gera "gap pra cima"
+  const handleLeave = useCallback(() => {
+    leaveTimerRef.current = setTimeout(() => {
+      isInViewRef.current = false
+      pauseAllIn(swiperRef.current?.el)
+    }, 300)
+  }, [])
 
   useIntersection(containerRef, handleEnter, handleLeave)
 
@@ -100,29 +120,26 @@ export function VideoCarousel({
       const idx = swiper.activeIndex
       setPhysicalActiveIdx(idx)
       onSlideChange(idx % N)
-      if (!previewMode) {
-        setTimeout(() => playActiveOnly(swiper), 120)
-      }
+      // Pausa todos imediatamente; cada VideoSlide retoma via useEffect interno
+      pauseAllIn(swiper.el)
     },
-    [onSlideChange, previewMode, N]
+    [onSlideChange, N]
   )
 
-  // Re-centraliza no array triplicado quando chega nas bordas (loop infinito).
-  // flushSync: força React a renderizar showVideo ANTES do slideTo mover o DOM,
-  // garantindo que o slide de destino já tenha o <video> montado — sem flash preto.
+  // Re-centralização sem flushSync — flushSync bloqueia o main thread durante
+  // a animação Swiper causando frames dropados no mobile.
+  // VideoSlide's useEffect cuida de iniciar o vídeo após re-render do React.
   const handleTransitionEnd = useCallback(
     (swiper: SwiperType) => {
       const idx = swiper.activeIndex
       if (idx < N || idx >= 2 * N) {
         const newIdx = idx < N ? idx + N : idx - N
-        flushSync(() => setPhysicalActiveIdx(newIdx))
+        // Sem flushSync — React re-renderiza async, VideoSlide's useEffect executa play
+        setPhysicalActiveIdx(newIdx)
         swiper.slideTo(newIdx, 0, false)
-        if (!previewMode) setTimeout(() => playActiveOnly(swiper), 80)
-      } else {
-        if (!previewMode) playActiveOnly(swiper)
       }
     },
-    [previewMode, N]
+    [N]
   )
 
   const handleVideoEnded = useCallback(() => {

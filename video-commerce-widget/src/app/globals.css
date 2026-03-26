@@ -19,6 +19,7 @@ video {
 /* ── Swiper: overflow visible para mostrar slides laterais ── */
 .vcw-carousel {
   overflow: hidden !important;
+  touch-action: pan-y;
 }
 
 .vcw-swiper {
@@ -32,17 +33,20 @@ video {
 
 /* ── vcw-slide-inner: transição de escala/opacidade + GPU acceleration ── */
 /* NÃO definir width aqui — Swiper calcula via slidesPerView numérico */
+/* contain: style paint (sem layout) — layout containment pode causar recálculos
+   inesperados em Swiper no mobile e não é necessário para GPU acceleration */
 .vcw-swiper .swiper-slide .vcw-slide-inner {
   transform: scale(0.9) translateZ(0);
   opacity: 0.68;
   transition:
-    transform 500ms cubic-bezier(0.22, 0.68, 0, 1),
-    opacity 500ms cubic-bezier(0.22, 0.68, 0, 1);
+    transform 420ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 420ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   border-radius: 14px;
   overflow: hidden;
-  will-change: transform;
-  contain: layout style paint;
+  will-change: transform, opacity;
+  contain: style paint;
 }
+
 
 .vcw-swiper .swiper-slide-active .vcw-slide-inner {
   transform: scale(1) translateZ(0);
