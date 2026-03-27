@@ -56,18 +56,17 @@ export function VideoCarousel({
   const N = videos.length
   const TOTAL = N * 3
 
-  function calcSpv() {
-    if (typeof window === 'undefined') return 5
+  function calcSlideWidth() {
+    if (typeof window === 'undefined') return 175
     const w = window.innerWidth
-    const slideW = w < 640 ? 130 : w < 1024 ? 160 : 190
-    return Math.min(8, Math.max(2.5, w / (slideW + 12)))
+    return w < 640 ? 175 : w < 1024 ? 210 : 250
   }
 
-  const [spv, setSpv] = useState<number>(calcSpv)
+  const [slideWidth, setSlideWidth] = useState<number>(calcSlideWidth)
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout>
-    const calc = () => { clearTimeout(t); t = setTimeout(() => setSpv(calcSpv()), 150) }
+    const calc = () => { clearTimeout(t); t = setTimeout(() => setSlideWidth(calcSlideWidth()), 150) }
     window.addEventListener('resize', calc, { passive: true })
     return () => { window.removeEventListener('resize', calc); clearTimeout(t) }
   }, [])
@@ -150,12 +149,12 @@ export function VideoCarousel({
         position: 'relative',
         width: '100%',
         overflow: 'hidden',
-        paddingTop: 8,
-        paddingBottom: 8,
+        paddingTop: 16,
+        paddingBottom: 16,
       }}
     >
       <Swiper
-        slidesPerView={spv}
+        slidesPerView="auto"
         centeredSlides
         initialSlide={N}
         speed={300}
@@ -185,7 +184,7 @@ export function VideoCarousel({
           const showVideo = dist <= 1
 
           return (
-            <SwiperSlide key={`${video.id}-${i}`}>
+            <SwiperSlide key={`${video.id}-${i}`} style={{ width: slideWidth, flexShrink: 0 }}>
               <VideoSlide
                 video={video}
                 settings={settings}
