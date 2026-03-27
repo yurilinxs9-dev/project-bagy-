@@ -125,7 +125,7 @@ export const VideoSlide = React.memo(function VideoSlide({
       style={{ cursor: previewMode ? 'default' : 'pointer' }}
       onClick={handleSlideClick}
     >
-      <div style={{ borderRadius: 14, overflow: 'hidden', background: '#1a1a1a' }}>
+      <div style={{ borderRadius: 15, overflow: 'hidden', background: '#1a1a1a', position: 'relative' }}>
 
         <div style={{ position: 'relative', paddingTop: '177.78%' }}>
 
@@ -228,15 +228,18 @@ export const VideoSlide = React.memo(function VideoSlide({
           )}
         </div>
 
-        <ProductCard
-          product={video.product}
-          accentColor={settings.accentColor}
-          onClick={
-            previewMode
-              ? undefined
-              : () => window.open(video.product.url, '_blank', 'noopener,noreferrer')
-          }
-        />
+        {/* Product chip — sobreposto no fundo do card 9:16 */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 6 }}>
+          <ProductCard
+            product={video.product}
+            accentColor={settings.accentColor}
+            onClick={
+              previewMode
+                ? undefined
+                : () => window.open(video.product.url, '_blank', 'noopener,noreferrer')
+            }
+          />
+        </div>
       </div>
     </div>
   )

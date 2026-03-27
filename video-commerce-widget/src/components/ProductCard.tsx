@@ -25,10 +25,10 @@ export const ProductCard = React.memo(function ProductCard({ product, onClick }:
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        padding: '10px 12px',
+        gap: 8,
+        padding: '8px 10px',
         background: '#ffffff',
-        borderTop: '1px solid rgba(0,0,0,0.07)',
+        borderTop: '1px solid #d8d8d8',
         cursor: 'pointer',
         transition: 'background 150ms ease',
       }}
@@ -41,12 +41,11 @@ export const ProductCard = React.memo(function ProductCard({ product, onClick }:
           alt={product.name}
           loading="lazy"
           style={{
-            width: 56,
-            height: 56,
-            borderRadius: 8,
+            width: 44,
+            height: 44,
+            borderRadius: 6,
             objectFit: 'cover',
             flexShrink: 0,
-            border: '1px solid rgba(0,0,0,0.06)',
           }}
           onError={(e) => { e.currentTarget.style.display = 'none' }}
         />
@@ -54,22 +53,22 @@ export const ProductCard = React.memo(function ProductCard({ product, onClick }:
       <div style={{ flex: 1, minWidth: 0 }}>
         <p
           style={{
-            fontSize: 11.5,
-            fontWeight: 600,
+            fontSize: 11,
+            fontWeight: 400,
             color: '#111',
             margin: 0,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             lineHeight: 1.3,
-            marginBottom: 3,
+            marginBottom: 2,
           }}
         >
           {product.name}
         </p>
         <p
           style={{
-            fontSize: 13.5,
+            fontSize: 12,
             fontWeight: 700,
             color: '#111',
             margin: 0,
