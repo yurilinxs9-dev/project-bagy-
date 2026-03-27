@@ -52,21 +52,29 @@ export function VideoCarousel({
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [physicalActiveIdx, setPhysicalActiveIdx] = useState(videos.length)
-  const [slideWidth, setSlideWidth] = useState(130)
 
   const N = videos.length
   const TOTAL = N * 3
 
+  function getSlideWidth() {
+    if (typeof window === 'undefined') return 130
+    if (window.innerWidth >= 1024) return 190
+    if (window.innerWidth >= 640) return 160
+    return 130
+  }
+
+  const [slideWidth, setSlideWidth] = useState<number>(getSlideWidth)
+
   useEffect(() => {
-    const calc = () => {
-      if (window.innerWidth >= 1024) setSlideWidth(190)
-      else if (window.innerWidth >= 640) setSlideWidth(160)
-      else setSlideWidth(130)
-    }
-    calc()
+    const calc = () => setSlideWidth(getSlideWidth())
     window.addEventListener('resize', calc, { passive: true })
     return () => window.removeEventListener('resize', calc)
   }, [])
+
+  // Força Swiper a recalcular quando slideWidth muda
+  useEffect(() => {
+    setTimeout(() => swiperRef.current?.update(), 50)
+  }, [slideWidth])
 
   useEffect(() => {
     const swiper = swiperRef.current
@@ -148,6 +156,7 @@ export function VideoCarousel({
         overflow: 'hidden',
         paddingTop: 8,
         paddingBottom: 8,
+        ['--vcw-slide-w' as string]: `${slideWidth}px`,
       }}
     >
       <Swiper

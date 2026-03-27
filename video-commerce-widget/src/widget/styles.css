@@ -18,6 +18,13 @@ video {
   touch-action: pan-y;
 }
 
+/* Força largura do slide — evita que Bagy/temas externos expandam os cards */
+.vcw-swiper .swiper-slide {
+  flex-shrink: 0 !important;
+  max-width: none !important;
+  width: var(--vcw-slide-w, 130px) !important;
+}
+
 .vcw-swiper {
   overflow: visible !important;
   width: 100% !important;
