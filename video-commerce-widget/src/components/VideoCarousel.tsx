@@ -35,12 +35,6 @@ function playActiveOnly(swiper: SwiperType) {
   }
 }
 
-function calcSpv() {
-  if (typeof window === 'undefined') return 5
-  const slideW =
-    window.innerWidth < 640 ? 130 : window.innerWidth < 1024 ? 160 : 190
-  return window.innerWidth / (slideW + 12)
-}
 
 export function VideoCarousel({
   videos,
@@ -56,27 +50,10 @@ export function VideoCarousel({
   const isInViewRef = useRef(false)
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [spv, setSpv] = useState(5)
   const [physicalActiveIdx, setPhysicalActiveIdx] = useState(videos.length)
 
   const N = videos.length
   const TOTAL = N * 3
-
-  // Debounce de 200ms no resize — impede que a barra de URL do mobile
-  // (que muda a altura do viewport ao rolar) dispare recálculos constantes
-  useEffect(() => {
-    let debounceTimer: ReturnType<typeof setTimeout>
-    const calc = () => {
-      clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => setSpv(Math.min(calcSpv(), 8)), 200)
-    }
-    setSpv(Math.min(calcSpv(), 8))
-    window.addEventListener('resize', calc, { passive: true })
-    return () => {
-      window.removeEventListener('resize', calc)
-      clearTimeout(debounceTimer)
-    }
-  }, [])
 
   useEffect(() => {
     const swiper = swiperRef.current
@@ -86,7 +63,7 @@ export function VideoCarousel({
       if (!previewMode && isInViewRef.current) playActiveOnly(swiper)
     }, 400)
     return () => clearTimeout(timer)
-  }, [spv, previewMode])
+  }, [previewMode])
 
   const handleEnter = useCallback(() => {
     // Cancela qualquer leave pendente (evita oscilação no limiar)
@@ -161,7 +138,7 @@ export function VideoCarousel({
       }}
     >
       <Swiper
-        slidesPerView={spv}
+        slidesPerView="auto"
         centeredSlides
         initialSlide={N}
         speed={300}

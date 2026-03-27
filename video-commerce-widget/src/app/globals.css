@@ -31,10 +31,24 @@ video {
   align-items: center;
 }
 
+/* ── Largura fixa por slide — tamanho consistente independente do nº de vídeos ── */
+.vcw-swiper .swiper-slide {
+  width: 130px !important;
+}
+
+@media (min-width: 640px) {
+  .vcw-swiper .swiper-slide {
+    width: 160px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .vcw-swiper .swiper-slide {
+    width: 190px !important;
+  }
+}
+
 /* ── vcw-slide-inner: transição de escala/opacidade + GPU acceleration ── */
-/* NÃO definir width aqui — Swiper calcula via slidesPerView numérico */
-/* contain: style paint (sem layout) — layout containment pode causar recálculos
-   inesperados em Swiper no mobile e não é necessário para GPU acceleration */
 .vcw-swiper .swiper-slide .vcw-slide-inner {
   transform: scale(0.86) translateZ(0);
   opacity: 0.68;
