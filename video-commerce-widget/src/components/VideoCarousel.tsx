@@ -57,9 +57,9 @@ export function VideoCarousel({
   const TOTAL = N * 3
 
   function calcSlideWidth() {
-    if (typeof window === 'undefined') return 175
+    if (typeof window === 'undefined') return 220
     const w = window.innerWidth
-    return w < 640 ? 175 : w < 1024 ? 210 : 250
+    return w < 640 ? 220 : w < 1024 ? 270 : 320
   }
 
   const [slideWidth, setSlideWidth] = useState<number>(calcSlideWidth)
@@ -149,8 +149,8 @@ export function VideoCarousel({
         position: 'relative',
         width: '100%',
         overflow: 'hidden',
-        paddingTop: 16,
-        paddingBottom: 16,
+        paddingTop: 24,
+        paddingBottom: 24,
       }}
     >
       <Swiper
@@ -158,7 +158,7 @@ export function VideoCarousel({
         centeredSlides
         initialSlide={N}
         speed={300}
-        spaceBetween={12}
+        spaceBetween={16}
         grabCursor={!previewMode}
         touchRatio={previewMode ? 0 : 1}
         allowTouchMove={!previewMode}
