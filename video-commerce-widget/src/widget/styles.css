@@ -1,0 +1,74 @@
+/* ── Esconder controles nativos do browser nos vídeos ── */
+video::-webkit-media-controls,
+video::-webkit-media-controls-enclosure,
+video::-webkit-media-controls-panel,
+video::-webkit-media-controls-play-button,
+video::-webkit-media-controls-overlay-play-button,
+video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+video {
+  -webkit-appearance: none;
+}
+
+/* ── Carousel container ── */
+.vcw-carousel {
+  overflow: hidden !important;
+  touch-action: pan-y;
+}
+
+.vcw-swiper {
+  overflow: visible !important;
+  width: 100% !important;
+}
+
+.vcw-swiper .swiper-wrapper {
+  align-items: center;
+}
+
+/* ── Slide inner: escala e opacidade ── */
+.vcw-swiper .swiper-slide .vcw-slide-inner {
+  transform: scale(0.86) translateZ(0);
+  opacity: 0.68;
+  transition:
+    transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border-radius: 15px;
+  overflow: hidden;
+  will-change: transform, opacity;
+}
+
+.vcw-swiper .swiper-slide-active .vcw-slide-inner {
+  transform: scale(1) translateZ(0);
+  opacity: 1;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.16));
+}
+
+.vcw-swiper .swiper-slide-prev .vcw-slide-inner,
+.vcw-swiper .swiper-slide-next .vcw-slide-inner {
+  opacity: 0.82;
+}
+
+/* ── Progress bar ── */
+@keyframes vcw-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+/* ── Spinner ── */
+@keyframes vcw-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Skeleton shimmer ── */
+@keyframes vcw-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.vcw-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: vcw-shimmer 1.5s infinite;
+}

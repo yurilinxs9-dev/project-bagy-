@@ -4,6 +4,7 @@ import React, { useRef, useCallback, useEffect, useState } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import type { Swiper as SwiperType } from 'swiper'
 import 'swiper/css'
+import '../widget/styles.css'
 
 import { VideoItem, WidgetSettings } from '@/types'
 import { VideoSlide } from './VideoSlide'
