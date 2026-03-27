@@ -34,6 +34,16 @@ function generatePosterFromVideoUrl(videoUrl: string): string {
   return `${m[1]}so_0.5,f_jpg,q_auto,w_400/${m[2]}.jpg`
 }
 
+// Converte .mov/.avi/.webm para mp4 h264 via Cloudinary — compatível com todos os browsers
+function optimizeVideoUrl(url: string): string {
+  if (!url) return url
+  const m = url.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(.*?)(\.[^.]+)$/)
+  if (!m) return url
+  const ext = m[3].toLowerCase()
+  if (ext === '.mp4') return url
+  return `${m[1]}f_mp4,vc_h264,q_auto/${m[2]}.mp4`
+}
+
 export const VideoSlide = React.memo(function VideoSlide({
   video,
   settings,
@@ -111,6 +121,7 @@ export const VideoSlide = React.memo(function VideoSlide({
     if (!previewMode) onVideoClick(index)
   }
 
+  const optimizedVideoUrl = optimizeVideoUrl(video.videoUrl)
   const manualPoster = optimizePosterUrl(video.posterUrl)
   const generatedPoster = !video.posterUrl
     ? generatePosterFromVideoUrl(video.videoUrl)
@@ -175,7 +186,7 @@ export const VideoSlide = React.memo(function VideoSlide({
           {showVideo && (
             <video
               ref={videoRef}
-              src={video.videoUrl}
+              src={optimizedVideoUrl}
               poster={effectivePoster || undefined}
               muted
               playsInline

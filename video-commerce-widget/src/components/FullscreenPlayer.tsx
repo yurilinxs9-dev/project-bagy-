@@ -23,6 +23,14 @@ function generatePosterFromVideoUrl(videoUrl: string): string {
   return `${m[1]}so_0.5,f_jpg,q_auto,w_300/${m[2]}.jpg`
 }
 
+function optimizeVideoUrl(url: string): string {
+  if (!url) return url
+  const m = url.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(.*?)(\.[^.]+)$/)
+  if (!m) return url
+  if (m[3].toLowerCase() === '.mp4') return url
+  return `${m[1]}f_mp4,vc_h264,q_auto/${m[2]}.mp4`
+}
+
 function SidePanel({ video, onClick }: { video: VideoItem; onClick: () => void }) {
   const poster = video.posterUrl || generatePosterFromVideoUrl(video.videoUrl)
   return (
@@ -84,7 +92,7 @@ export function FullscreenPlayer({
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
-    video.src = videos[currentIndex].videoUrl
+    video.src = optimizeVideoUrl(videos[currentIndex].videoUrl)
     video.load()
     video.play()
       .then(() => setIsPlaying(true))
