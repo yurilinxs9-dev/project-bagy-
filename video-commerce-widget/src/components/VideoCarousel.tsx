@@ -51,9 +51,21 @@ export function VideoCarousel({
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [physicalActiveIdx, setPhysicalActiveIdx] = useState(videos.length)
+  const [slideWidth, setSlideWidth] = useState(130)
 
   const N = videos.length
   const TOTAL = N * 3
+
+  useEffect(() => {
+    const calc = () => {
+      if (window.innerWidth >= 1024) setSlideWidth(190)
+      else if (window.innerWidth >= 640) setSlideWidth(160)
+      else setSlideWidth(130)
+    }
+    calc()
+    window.addEventListener('resize', calc, { passive: true })
+    return () => window.removeEventListener('resize', calc)
+  }, [])
 
   useEffect(() => {
     const swiper = swiperRef.current
@@ -168,7 +180,7 @@ export function VideoCarousel({
           const showVideo = dist <= 1
 
           return (
-            <SwiperSlide key={`${video.id}-${i}`}>
+            <SwiperSlide key={`${video.id}-${i}`} style={{ width: slideWidth }}>
               <VideoSlide
                 video={video}
                 settings={settings}
